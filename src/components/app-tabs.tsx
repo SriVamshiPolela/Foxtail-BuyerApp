@@ -1,32 +1,112 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+import {
+  Tabs,
+  TabList,
+  TabSlot,
+  TabTrigger,
+  type TabTriggerSlotProps,
+  type TabListProps,
+} from 'expo-router/ui';
+import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
+type TabButtonProps = TabTriggerSlotProps & { icon?: string; badge?: number };
 
-export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
+function TabButton({ icon = '', badge, isFocused, children, ...props }: TabButtonProps) {
+  const color = isFocused ? '#c75a28' : '#6b7280';
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Pressable {...props} style={s.tab}>
+      <View style={s.iconWrap}>
+        <Text style={s.icon}>{icon}</Text>
+        {!!badge && (
+          <View style={s.badge}>
+            <Text style={s.badgeText}>{badge}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[s.label, { color }]}>{children as string}</Text>
+      {isFocused && <View style={s.indicator} />}
+    </Pressable>
   );
 }
+
+function BottomBar({ children, ...props }: TabListProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View {...props} style={[s.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {children}
+    </View>
+  );
+}
+
+export default function AppTabs() {
+  return (
+    <Tabs>
+      <TabSlot style={{ flex: 1 }} />
+      <TabList asChild>
+        <BottomBar>
+          {/* @ts-ignore icon is a custom prop passed through asChild */}
+          <TabTrigger name="index" href="/" asChild>
+            <TabButton icon="🏠">Home</TabButton>
+          </TabTrigger>
+          {/* @ts-ignore */}
+          <TabTrigger name="explore" href="/explore" asChild>
+            <TabButton icon="🔍">Explore</TabButton>
+          </TabTrigger>
+          {/* @ts-ignore */}
+          <TabTrigger name="cart" href="/cart" asChild>
+            <TabButton icon="🛒" badge={3}>Cart</TabButton>
+          </TabTrigger>
+          {/* @ts-ignore */}
+          <TabTrigger name="orders" href="/orders" asChild>
+            <TabButton icon="📦">Orders</TabButton>
+          </TabTrigger>
+          {/* @ts-ignore */}
+          <TabTrigger name="profile" href="/profile" asChild>
+            <TabButton icon="👤">Profile</TabButton>
+          </TabTrigger>
+        </BottomBar>
+      </TabList>
+    </Tabs>
+  );
+}
+
+const s = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingTop: 8,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingBottom: 4,
+    position: 'relative',
+  },
+  iconWrap: { position: 'relative' },
+  icon: { fontSize: 20 },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    backgroundColor: '#c75a28',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: { color: '#ffffff', fontSize: 9, fontWeight: '700' },
+  label: { fontSize: 10, fontWeight: '500' },
+  indicator: {
+    position: 'absolute',
+    bottom: -4,
+    width: 28,
+    height: 3,
+    backgroundColor: '#c75a28',
+    borderRadius: 2,
+  },
+});

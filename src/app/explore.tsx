@@ -1,180 +1,216 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { ScrollView, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ExternalLink } from '@/components/external-link';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { RangoliBorder, ShippabilityBadge } from '@/components/buyer-ui';
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
-  };
-  const theme = useTheme();
+type ShipLevel = 'mandal' | 'district' | 'state' | 'national';
 
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
-  });
+const regions = [
+  { id: 'mandal', label: 'My Mandal', icon: '🏘️', count: 45 },
+  { id: 'district', label: 'My District', icon: '🏙️', count: 234 },
+  { id: 'state', label: 'My State', icon: '🗺️', count: 1203 },
+  { id: 'national', label: 'All India', icon: '🇮🇳', count: 5670 },
+];
+
+const products: { name: string; vendor: string; price: number; image: string; rating: number; shippability: ShipLevel }[] = [
+  { name: 'Farm Fresh Tomatoes', vendor: 'Local Farm', price: 45, image: '🍅', rating: 4.8, shippability: 'mandal' },
+  { name: 'Organic Rice (5kg)', vendor: 'Krishna Farms', price: 320, image: '🍚', rating: 4.7, shippability: 'district' },
+  { name: 'Handmade Pickles', vendor: 'Amma Kitchen', price: 180, image: '🫙', rating: 4.9, shippability: 'state' },
+  { name: 'Pochampally Saree', vendor: 'Weavers Coop', price: 2800, image: '👗', rating: 5.0, shippability: 'national' },
+  { name: 'Pure Ghee (500ml)', vendor: 'Desi Dairy', price: 450, image: '🧈', rating: 4.8, shippability: 'state' },
+  { name: 'Clay Pottery Set', vendor: 'Kulal Artisans', price: 650, image: '🏺', rating: 4.6, shippability: 'district' },
+];
+
+export default function ExploreScreen() {
+  const [selectedRegion, setSelectedRegion] = useState('mandal');
+  const current = regions.find((r) => r.id === selectedRegion)!;
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
-          </ThemedText>
-
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
-                />
-              </ThemedView>
+    <ScrollView style={s.screen} showsVerticalScrollIndicator={false}>
+      <SafeAreaView edges={['top']}>
+        {/* Header */}
+        <View style={s.header}>
+          <View style={s.headerRow}>
+            <Text style={s.title}>Explore Products</Text>
+            <Pressable style={s.filterBtn}>
+              <Text style={{ fontSize: 14 }}>⚙️</Text>
             </Pressable>
-          </ExternalLink>
-        </ThemedView>
+          </View>
+          <View style={s.searchRow}>
+            <Text style={{ marginRight: 8 }}>🔍</Text>
+            <TextInput
+              style={s.searchInput}
+              placeholder="Search products, vendors..."
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+        </View>
 
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+        {/* Region Selector */}
+        <View style={s.section}>
+          <Text style={s.regionLabel}>Shop by Region</Text>
+          <View style={s.regionGrid}>
+            {regions.map((r) => (
+              <Pressable
+                key={r.id}
+                onPress={() => setSelectedRegion(r.id)}
+                style={[s.regionCard, r.id === selectedRegion && s.regionCardActive]}
+              >
+                <Text style={{ fontSize: 20 }}>{r.icon}</Text>
+                <Text style={[s.regionName, r.id === selectedRegion && s.regionNameActive]}>
+                  {r.label}
+                </Text>
+                <Text style={s.regionCount}>{r.count} items</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
+        <View style={{ paddingVertical: 16 }}>
+          <RangoliBorder />
+        </View>
 
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+        {/* Product Grid */}
+        <View style={s.section}>
+          <View style={s.gridHeader}>
+            <Text style={s.gridInfo}>
+              Showing{' '}
+              <Text style={{ color: '#111827', fontWeight: '700' }}>{current.count}</Text>
+              {' '}products
+            </Text>
+            <Text style={s.sortBtn}>Sort by ▾</Text>
+          </View>
+          <View style={s.grid}>
+            {products.map((p, i) => (
+              <View key={i} style={s.prodCard}>
+                <View style={s.prodImg}>
+                  <Text style={{ fontSize: 38 }}>{p.image}</Text>
+                  <Pressable style={s.wishBtn}>
+                    <Text style={{ fontSize: 13 }}>🤍</Text>
+                  </Pressable>
+                </View>
+                <View style={s.prodBody}>
+                  <ShippabilityBadge level={p.shippability} />
+                  <Text style={s.prodName} numberOfLines={1}>{p.name}</Text>
+                  <Text style={s.prodVendor}>{p.vendor}</Text>
+                  <View style={s.prodBottom}>
+                    <Text style={s.prodPrice}>₹{p.price}</Text>
+                    <Text style={s.prodRating}>★ {p.rating}</Text>
+                  </View>
+                  <Pressable style={s.addBtn}>
+                    <Text style={s.addBtnText}>Add to Cart</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
 
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
+        <View style={{ height: 32 }} />
+      </SafeAreaView>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  scrollView: {
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#f9fafb' },
+
+  header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  title: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  filterBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchInput: { flex: 1, fontSize: 13, color: '#111827' },
+
+  section: { paddingHorizontal: 16, paddingBottom: 8 },
+  regionLabel: { fontSize: 12, color: '#6b7280', marginBottom: 8 },
+  regionGrid: { flexDirection: 'row', gap: 8 },
+  regionCard: {
     flex: 1,
+    padding: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    gap: 2,
   },
-  contentContainer: {
+  regionCardActive: { borderColor: '#c75a28', backgroundColor: '#fff7f5' },
+  regionName: { fontSize: 9, fontWeight: '600', color: '#374151', textAlign: 'center' },
+  regionNameActive: { color: '#c75a28' },
+  regionCount: { fontSize: 8, color: '#6b7280' },
+
+  gridHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  gridInfo: { fontSize: 12, color: '#6b7280' },
+  sortBtn: { fontSize: 12, color: '#374151' },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  prodCard: {
+    width: '47%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  prodImg: {
+    height: 110,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  wishBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 14,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
-  },
-  titleContainer: {
-    gap: Spacing.three,
+  prodBody: { padding: 8, gap: 3 },
+  prodName: { fontSize: 12, fontWeight: '600', color: '#111827' },
+  prodVendor: { fontSize: 10, color: '#6b7280' },
+  prodBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  prodPrice: { fontSize: 14, fontWeight: '700', color: '#c75a28' },
+  prodRating: { fontSize: 10, fontWeight: '600', color: '#374151' },
+  addBtn: {
+    backgroundColor: '#c75a28',
+    borderRadius: 8,
+    height: 30,
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
-  },
-  centerText: {
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
     justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
+    marginTop: 2,
   },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  collapsibleContent: {
-    alignItems: 'center',
-  },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.two,
-  },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-  },
+  addBtnText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 });

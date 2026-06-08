@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "FirstTrial",
-    "slug": "FirstTrial",
+    "name": "BuyerApp",
+    "slug": "BuyerApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "firsttrial",
+    "scheme": "buyerapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
