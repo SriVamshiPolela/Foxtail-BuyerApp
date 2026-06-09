@@ -1,30 +1,64 @@
-import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+﻿import { useState, useEffect } from 'react';
+import { ScrollView, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { RangoliBorder, ShippabilityBadge } from '@/components/buyer-ui';
+import { RangoliBorder, ShippabilityBadge, TrustBadge } from '@/components/buyer-ui';
 
 type ShipLevel = 'mandal' | 'district' | 'state' | 'national';
 
-const regions = [
-  { id: 'mandal', label: 'My Mandal', icon: '🏘️', count: 45 },
-  { id: 'district', label: 'My District', icon: '🏙️', count: 234 },
-  { id: 'state', label: 'My State', icon: '🗺️', count: 1203 },
-  { id: 'national', label: 'All India', icon: '🇮🇳', count: 5670 },
-];
+// 10.0.2.2 is the Android emulator's alias for the host machine (your PC)
+const CATALOG_API = 'http://10.0.2.2:3003';
 
-const products: { name: string; vendor: string; price: number; originalPrice: number; image: string; rating: number; shippability: ShipLevel }[] = [
-  { name: 'Farm Fresh Tomatoes', vendor: 'Local Farm', price: 45, originalPrice: 60, image: '🍅', rating: 4.8, shippability: 'mandal' },
-  { name: 'Organic Rice (5kg)', vendor: 'Krishna Farms', price: 320, originalPrice: 400, image: '🍚', rating: 4.7, shippability: 'district' },
-  { name: 'Handmade Pickles', vendor: 'Amma Kitchen', price: 180, originalPrice: 220, image: '🫙', rating: 4.9, shippability: 'state' },
-  { name: 'Pochampally Saree', vendor: 'Weavers Coop', price: 2800, originalPrice: 3500, image: '👗', rating: 5.0, shippability: 'national' },
-  { name: 'Pure Ghee (500ml)', vendor: 'Desi Dairy', price: 450, originalPrice: 550, image: '🧈', rating: 4.8, shippability: 'state' },
-  { name: 'Clay Pottery Set', vendor: 'Kulal Artisans', price: 650, originalPrice: 800, image: '🏺', rating: 4.6, shippability: 'district' },
+const CATEGORY_EMOJI: Record<string, string> = {
+  farm_products:   '🌾',
+  processed_foods: '🫙',
+  foods:           '🍱',
+  arts_handmade:   '🎨',
+  services:        '🔧',
+};
+
+interface ApiProduct {
+  id: string;
+  name: string;
+  category: string;
+  subCategory: string;
+  price: number;
+  originalPrice?: number;
+  unit: string;
+  sellerId: string;
+  sellerName: string;
+  location: string;
+  inStock: boolean;
+  isVerified: boolean;
+  isHandmade: boolean;
+  shipsTo: ShipLevel;
+  rating: number;
+  reviewCount: number;
+  createdAt: string;
+}
+
+const regions = [
+  { id: 'mandal',   label: 'Armoor',    icon: '🏘️' },
+  { id: 'district', label: 'Nizamabad', icon: '🏙️' },
+  { id: 'state',    label: 'Telangana', icon: '🗺️' },
+  { id: 'national', label: 'All India', icon: '🇮🇳' },
 ];
 
 export default function ExploreScreen() {
   const [selectedRegion, setSelectedRegion] = useState('mandal');
-  const current = regions.find((r) => r.id === selectedRegion)!;
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch(`${CATALOG_API}/v1/products`)
+      .then((res) => res.json())
+      .then((body) => setProducts(body.data))
+      .catch(() => setError('Could not load products. Is catalog-svc running?'))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <ScrollView style={s.screen} showsVerticalScrollIndicator={false}>
@@ -69,7 +103,7 @@ export default function ExploreScreen() {
                   {r.label}
                 </Text>
                 <Text style={[s.regionCount, r.id === selectedRegion && { color: '#c75a28' }]}>
-                  {r.count}
+                  {products.length} items
                 </Text>
               </Pressable>
             ))}
@@ -84,8 +118,9 @@ export default function ExploreScreen() {
         <View style={s.section}>
           <View style={s.gridHeader}>
             <Text style={s.gridInfo}>
-              <Text style={{ color: '#111827', fontWeight: '700' }}>{current.count}</Text>
-              {' '}products found
+              Showing{' '}
+              <Text style={{ color: '#111827', fontWeight: '700' }}>{products.length}</Text>
+              {' '}products
             </Text>
             <Pressable
               style={({ pressed }) => [s.sortBtnWrap, pressed && { opacity: 0.7 }]}
@@ -93,41 +128,74 @@ export default function ExploreScreen() {
               <Text style={s.sortBtn}>Sort by ▾</Text>
             </Pressable>
           </View>
-          <View style={s.grid}>
-            {products.map((p, i) => (
-              <Pressable
-                key={i}
-                style={({ pressed }) => [s.prodCard, pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] }]}
-              >
-                <View style={s.prodImg}>
-                  <Text style={{ fontSize: 40 }}>{p.image}</Text>
-                  <Pressable
-                    style={({ pressed }) => [s.wishBtn, pressed && { opacity: 0.6, transform: [{ scale: 0.85 }] }]}
-                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                  >
-                    <Text style={{ fontSize: 12 }}>🤍</Text>
-                  </Pressable>
-                </View>
-                <View style={s.prodBody}>
-                  <ShippabilityBadge level={p.shippability} />
-                  <Text style={s.prodName} numberOfLines={2}>{p.name}</Text>
-                  <Text style={s.prodVendor}>{p.vendor}</Text>
-                  <View style={s.prodBottom}>
-                    <View>
-                      <Text style={s.prodPrice}>₹{p.price}</Text>
-                      <Text style={s.prodOrigPrice}>₹{p.originalPrice}</Text>
-                    </View>
-                    <Text style={s.prodRating}>★ {p.rating}</Text>
+
+          {loading && (
+            <View style={s.centerMsg}>
+              <ActivityIndicator size="large" color="#c75a28" />
+              <Text style={s.msgText}>Loading products...</Text>
+            </View>
+          )}
+
+          {error && (
+            <View style={s.centerMsg}>
+              <Text style={s.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {!loading && !error && (
+            <View style={s.grid}>
+              {products.map((p) => (
+                <Pressable
+                  key={p.id}
+                  style={({ pressed }) => [s.prodCard, pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] }]}
+                >
+                  <View style={s.prodImg}>
+                    <Text style={{ fontSize: 36 }}>{CATEGORY_EMOJI[p.category] ?? '📦'}</Text>
+                    <Pressable
+                      style={({ pressed }) => [s.wishBtn, pressed && { opacity: 0.6, transform: [{ scale: 0.85 }] }]}
+                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                    >
+                      <Text style={{ fontSize: 13 }}>🤍</Text>
+                    </Pressable>
                   </View>
-                  <Pressable
-                    style={({ pressed }) => [s.addBtn, pressed && { opacity: 0.82, transform: [{ scale: 0.97 }] }]}
-                  >
-                    <Text style={s.addBtnText}>+ Add to Cart</Text>
-                  </Pressable>
-                </View>
-              </Pressable>
-            ))}
-          </View>
+
+                  <View style={s.prodBody}>
+                    <View style={s.badgeRow}>
+                      {p.isVerified && <TrustBadge type="verified" small />}
+                      {p.isHandmade && <TrustBadge type="handmade" small />}
+                      <ShippabilityBadge level={p.shipsTo} />
+                    </View>
+
+                    <Text style={s.prodName} numberOfLines={2}>{p.name}</Text>
+                    <Text style={s.prodVendor} numberOfLines={1}>{p.sellerName}</Text>
+                    <Text style={s.prodLocation} numberOfLines={1}>📍 {p.location}</Text>
+                    <Text style={s.prodRating}>★ {p.rating.toFixed(1)}  ({p.reviewCount})</Text>
+
+                    <View style={s.prodBottom}>
+                      <View>
+                        <Text style={s.prodPrice}>₹{(p.price / 100).toFixed(0)}</Text>
+                        {p.originalPrice && (
+                          <Text style={s.prodOriginalPrice}>₹{(p.originalPrice / 100).toFixed(0)}</Text>
+                        )}
+                      </View>
+                      <Text style={s.prodUnit}>/{p.unit}</Text>
+                    </View>
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        s.addBtn,
+                        !p.inStock && s.addBtnDisabled,
+                        pressed && p.inStock && { opacity: 0.82, transform: [{ scale: 0.97 }] },
+                      ]}
+                      disabled={!p.inStock}
+                    >
+                      <Text style={s.addBtnText}>{p.inStock ? '+ Add to Cart' : 'Out of Stock'}</Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={{ height: 32 }} />
@@ -269,8 +337,10 @@ const s = StyleSheet.create({
     elevation: 2,
   },
   prodBody: { padding: 10, gap: 4 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 2 },
   prodName: { fontSize: 12, fontWeight: '700', color: '#111827', lineHeight: 16 },
-  prodVendor: { fontSize: 10, color: '#9ca3af' },
+  prodVendor: { fontSize: 10, color: '#6b7280' },
+  prodLocation: { fontSize: 9, color: '#9ca3af' },
   prodBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -278,8 +348,9 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   prodPrice: { fontSize: 15, fontWeight: '800', color: '#c75a28' },
-  prodOrigPrice: { fontSize: 10, color: '#9ca3af', textDecorationLine: 'line-through' },
-  prodRating: { fontSize: 11, fontWeight: '700', color: '#374151' },
+  prodOriginalPrice: { fontSize: 10, color: '#9ca3af', textDecorationLine: 'line-through' },
+  prodUnit: { fontSize: 10, color: '#6b7280', marginBottom: 1 },
+  prodRating: { fontSize: 10, color: '#f59e0b', fontWeight: '600' },
   addBtn: {
     backgroundColor: '#c75a28',
     borderRadius: 10,
@@ -293,5 +364,10 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
+  addBtnDisabled: { backgroundColor: '#9ca3af', shadowOpacity: 0 },
   addBtnText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+
+  centerMsg: { alignItems: 'center', paddingVertical: 32, gap: 8 },
+  msgText: { fontSize: 13, color: '#6b7280' },
+  errorText: { fontSize: 13, color: '#dc2626', textAlign: 'center' },
 });
