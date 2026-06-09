@@ -9,6 +9,8 @@ import {
 import { Pressable, View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCartStore, cartItemCount } from '@/store/cart';
+
 type TabButtonProps = TabTriggerSlotProps & { icon?: string; badge?: number };
 
 function TabButton({ icon = '', badge, isFocused, children, ...props }: TabButtonProps) {
@@ -42,6 +44,7 @@ function BottomBar({ children, ...props }: TabListProps) {
 }
 
 export default function AppTabs() {
+  const count = useCartStore(cartItemCount);
   return (
     <Tabs>
       <TabSlot style={{ flex: 1 }} />
@@ -57,7 +60,7 @@ export default function AppTabs() {
           </TabTrigger>
           {/* @ts-ignore */}
           <TabTrigger name="cart" href="/cart" asChild>
-            <TabButton icon="🛒" badge={3}>Cart</TabButton>
+            <TabButton icon="🛒" badge={count > 0 ? count : undefined}>Cart</TabButton>
           </TabTrigger>
           {/* @ts-ignore */}
           <TabTrigger name="orders" href="/orders" asChild>

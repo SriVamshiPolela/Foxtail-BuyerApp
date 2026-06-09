@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 
+import type { TrustType, ShipLevel } from '@/types';
+
 export function RangoliBorder() {
   const pattern = [
     { color: '#c75a28', size: 9 },
@@ -30,8 +32,6 @@ export function RangoliBorder() {
   );
 }
 
-type TrustType = 'verified' | 'local' | 'organic' | 'handmade';
-
 const trustConfig: Record<TrustType, { label: string; bg: string; border: string; textColor: string; icon: string }> = {
   verified: { label: 'Verified', bg: '#dcfce7', border: '#86efac', textColor: '#166534', icon: '✓' },
   local:    { label: 'Local',    bg: '#fff3ef', border: '#fdc9b0', textColor: '#9a3412', icon: '📍' },
@@ -59,8 +59,6 @@ export function TrustBadge({ type, small = false }: { type: TrustType; small?: b
     </View>
   );
 }
-
-type ShipLevel = 'mandal' | 'district' | 'state' | 'national';
 
 const shipConfig: Record<ShipLevel, { label: string; bg: string; text: string; border: string; icon: string }> = {
   mandal:   { label: 'Mandal Only',      bg: '#f3f4f6', text: '#374151', border: '#d1d5db', icon: '🏘️' },
