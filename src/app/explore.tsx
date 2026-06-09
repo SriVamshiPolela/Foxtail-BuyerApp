@@ -7,9 +7,9 @@ import { RangoliBorder, ShippabilityBadge } from '@/components/buyer-ui';
 type ShipLevel = 'mandal' | 'district' | 'state' | 'national';
 
 const regions = [
-  { id: 'mandal', label: 'My Mandal', icon: '🏘️', count: 45 },
-  { id: 'district', label: 'My District', icon: '🏙️', count: 234 },
-  { id: 'state', label: 'My State', icon: '🗺️', count: 1203 },
+  { id: 'mandal', label: 'Armoor', icon: '🏘️', count: 45 },
+  { id: 'district', label: 'Nizamabad', icon: '🏙️', count: 234 },
+  { id: 'state', label: 'Telangana', icon: '🗺️', count: 1203 },
   { id: 'national', label: 'All India', icon: '🇮🇳', count: 5670 },
 ];
 
