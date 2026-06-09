@@ -12,19 +12,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type TabButtonProps = TabTriggerSlotProps & { icon?: string; badge?: number };
 
 function TabButton({ icon = '', badge, isFocused, children, ...props }: TabButtonProps) {
-  const color = isFocused ? '#c75a28' : '#6b7280';
+  const labelColor = isFocused ? '#c75a28' : '#9ca3af';
   return (
-    <Pressable {...props} style={s.tab}>
-      <View style={s.iconWrap}>
-        <Text style={s.icon}>{icon}</Text>
+    <Pressable
+      {...props}
+      style={({ pressed }) => [s.tab, pressed && { opacity: 0.6 }]}
+      hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}
+    >
+      <View style={[s.iconWrap, isFocused && s.iconWrapActive]}>
+        <Text style={[s.icon, isFocused && s.iconActive]}>{icon}</Text>
         {!!badge && (
           <View style={s.badge}>
-            <Text style={s.badgeText}>{badge}</Text>
+            <Text style={s.badgeText}>{badge > 9 ? '9+' : String(badge)}</Text>
           </View>
         )}
       </View>
-      <Text style={[s.label, { color }]}>{children as string}</Text>
-      {isFocused && <View style={s.indicator} />}
+      <Text style={[s.label, { color: labelColor }]}>{children as string}</Text>
     </Pressable>
   );
 }
@@ -74,39 +77,49 @@ const s = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#e5e7eb',
     paddingTop: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 12,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
     paddingBottom: 4,
-    position: 'relative',
+    paddingTop: 2,
   },
-  iconWrap: { position: 'relative' },
+  iconWrap: {
+    position: 'relative',
+    width: 48,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 15,
+  },
+  iconWrapActive: {
+    backgroundColor: '#fff3ef',
+  },
   icon: { fontSize: 20 },
+  iconActive: {},
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -10,
+    top: -3,
+    right: -6,
     backgroundColor: '#c75a28',
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    borderRadius: 9,
+    minWidth: 17,
+    height: 17,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
   badgeText: { color: '#ffffff', fontSize: 9, fontWeight: '700' },
-  label: { fontSize: 10, fontWeight: '500' },
-  indicator: {
-    position: 'absolute',
-    bottom: -4,
-    width: 28,
-    height: 3,
-    backgroundColor: '#c75a28',
-    borderRadius: 2,
-  },
+  label: { fontSize: 10, fontWeight: '600' },
 });

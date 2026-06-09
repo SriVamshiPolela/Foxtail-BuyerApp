@@ -45,10 +45,10 @@ const orders: Order[] = [
   },
 ];
 
-const statusCfg: Record<OrderStatus, { label: string; bg: string; text: string; icon: string }> = {
-  delivered: { label: 'Delivered', bg: '#dcfce7', text: '#166534', icon: '✓' },
-  'in-transit': { label: 'In Transit', bg: '#fef3c7', text: '#92400e', icon: '🚚' },
-  processing: { label: 'Processing', bg: '#f3f4f6', text: '#374151', icon: '⏳' },
+const statusCfg: Record<OrderStatus, { label: string; bg: string; text: string; border: string; icon: string }> = {
+  delivered:   { label: 'Delivered',  bg: '#dcfce7', text: '#166534', border: '#86efac', icon: '✓' },
+  'in-transit':{ label: 'In Transit', bg: '#fef3c7', text: '#92400e', border: '#fcd34d', icon: '🚚' },
+  processing:  { label: 'Processing', bg: '#f3f4f6', text: '#374151', border: '#d1d5db', icon: '⏳' },
 };
 
 const filterTabs = ['All', 'Active', 'Delivered'];
@@ -71,33 +71,42 @@ export default function OrdersScreen() {
         </View>
 
         {/* Filter Tabs */}
-        <View style={s.tabRow}>
-          {filterTabs.map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => setActiveTab(t)}
-              style={[s.tab, t === activeTab && s.tabActive]}
-            >
-              <Text style={[s.tabText, t === activeTab && s.tabTextActive]}>{t}</Text>
-            </Pressable>
-          ))}
+        <View style={s.tabWrap}>
+          <View style={s.tabRow}>
+            {filterTabs.map((t) => (
+              <Pressable
+                key={t}
+                onPress={() => setActiveTab(t)}
+                style={({ pressed }) => [
+                  s.tab,
+                  t === activeTab && s.tabActive,
+                  pressed && { opacity: 0.75 },
+                ]}
+              >
+                <Text style={[s.tabText, t === activeTab && s.tabTextActive]}>{t}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         {/* Orders List */}
-        <View style={[s.section, { gap: 12 }]}>
+        <View style={[s.section, { gap: 14 }]}>
           {filtered.map((order) => {
             const cfg = statusCfg[order.status];
             return (
-              <View key={order.id} style={s.card}>
+              <Pressable
+                key={order.id}
+                style={({ pressed }) => [s.card, pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] }]}
+              >
                 {/* Order Header */}
                 <View style={s.cardHead}>
                   <View>
-                    <Text style={s.orderId}>Order #{order.id}</Text>
+                    <Text style={s.orderId}>#{order.id}</Text>
                     <Text style={s.orderDate}>{order.date}</Text>
                   </View>
-                  <View style={[s.statusBadge, { backgroundColor: cfg.bg }]}>
+                  <View style={[s.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
                     <Text style={[s.statusText, { color: cfg.text }]}>
-                      {cfg.icon} {cfg.label}
+                      {cfg.icon}  {cfg.label}
                     </Text>
                   </View>
                 </View>
@@ -106,12 +115,12 @@ export default function OrdersScreen() {
                 <View style={s.itemsRow}>
                   <View style={{ flexDirection: 'row' }}>
                     {order.items.slice(0, 3).map((item, i) => (
-                      <View key={i} style={[s.itemThumb, { marginLeft: i > 0 ? -6 : 0 }]}>
-                        <Text style={{ fontSize: 16 }}>{item.image}</Text>
+                      <View key={i} style={[s.itemThumb, { marginLeft: i > 0 ? -8 : 0 }]}>
+                        <Text style={{ fontSize: 18 }}>{item.image}</Text>
                       </View>
                     ))}
                   </View>
-                  <View style={{ flex: 1, marginLeft: 10 }}>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={s.itemNames} numberOfLines={1}>
                       {order.items.map((i) => i.name).join(', ')}
                     </Text>
@@ -122,7 +131,7 @@ export default function OrdersScreen() {
                 {/* Transit Progress */}
                 {order.status === 'in-transit' && (
                   <View style={s.transitBox}>
-                    <Text style={{ fontSize: 14 }}>🚚</Text>
+                    <Text style={{ fontSize: 16 }}>🚚</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={s.transitText}>
                         Expected by {order.expectedDelivery}
@@ -136,17 +145,24 @@ export default function OrdersScreen() {
 
                 {/* Footer */}
                 <View style={s.cardFoot}>
-                  <Text style={s.total}>₹{order.total}</Text>
+                  <View>
+                    <Text style={s.totalLabel}>Order Total</Text>
+                    <Text style={s.total}>₹{order.total}</Text>
+                  </View>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <Pressable style={s.outlineBtn}>
+                    <Pressable
+                      style={({ pressed }) => [s.outlineBtn, pressed && { opacity: 0.7 }]}
+                    >
                       <Text style={s.outlineBtnText}>💬 Support</Text>
                     </Pressable>
-                    <Pressable style={s.primaryBtn}>
-                      <Text style={s.primaryBtnText}>Track Order</Text>
+                    <Pressable
+                      style={({ pressed }) => [s.primaryBtn, pressed && { opacity: 0.82, transform: [{ scale: 0.96 }] }]}
+                    >
+                      <Text style={s.primaryBtnText}>Track →</Text>
                     </Pressable>
                   </View>
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -158,73 +174,100 @@ export default function OrdersScreen() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f9fafb' },
+  screen: { flex: 1, backgroundColor: '#f5f5f7' },
   header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  title: { fontSize: 20, fontWeight: '700', color: '#111827' },
-  subtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  title: { fontSize: 22, fontWeight: '800', color: '#111827' },
+  subtitle: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
 
+  tabWrap: { paddingHorizontal: 16, marginVertical: 14 },
   tabRow: {
     flexDirection: 'row',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
+    backgroundColor: '#f0f0f3',
+    borderRadius: 12,
     padding: 4,
   },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  tab: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 9,
+    alignItems: 'center',
+  },
   tabActive: {
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 3,
   },
-  tabText: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
-  tabTextActive: { color: '#111827', fontWeight: '700' },
+  tabText: { fontSize: 13, color: '#9ca3af', fontWeight: '600' },
+  tabTextActive: { color: '#c75a28', fontWeight: '800' },
 
   section: { paddingHorizontal: 16 },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 12,
+    borderColor: '#f0f0f3',
+    gap: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   cardHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  orderId: { fontSize: 10, color: '#6b7280' },
-  orderDate: { fontSize: 11, color: '#6b7280', marginTop: 1 },
-  statusBadge: { borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4 },
-  statusText: { fontSize: 11, fontWeight: '700' },
+  orderId: { fontSize: 11, color: '#374151', fontWeight: '700' },
+  orderDate: { fontSize: 10, color: '#9ca3af', marginTop: 2 },
+  statusBadge: {
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+  },
+  statusText: { fontSize: 11, fontWeight: '800' },
 
   itemsRow: { flexDirection: 'row', alignItems: 'center' },
   itemThumb: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    backgroundColor: '#fff7f5',
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  itemNames: { fontSize: 13, fontWeight: '600', color: '#111827' },
-  vendorName: { fontSize: 10, color: '#6b7280', marginTop: 1 },
+  itemNames: { fontSize: 13, fontWeight: '700', color: '#111827' },
+  vendorName: { fontSize: 10, color: '#9ca3af', marginTop: 2 },
 
   transitBox: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     alignItems: 'center',
     backgroundColor: '#fff7f5',
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#fdc9b0',
   },
-  transitText: { fontSize: 12, fontWeight: '600', color: '#c75a28' },
-  progressTrack: { height: 6, backgroundColor: '#e5e7eb', borderRadius: 3, marginTop: 4 },
+  transitText: { fontSize: 12, fontWeight: '700', color: '#c75a28' },
+  progressTrack: {
+    height: 6,
+    backgroundColor: '#f0f0f3',
+    borderRadius: 3,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
   progressFill: { height: 6, backgroundColor: '#c75a28', borderRadius: 3 },
 
   cardFoot: {
@@ -232,23 +275,30 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    paddingTop: 10,
+    borderTopColor: '#f5f5f7',
+    paddingTop: 12,
   },
-  total: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  totalLabel: { fontSize: 10, color: '#9ca3af' },
+  total: { fontSize: 16, fontWeight: '800', color: '#111827', marginTop: 1 },
   outlineBtn: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
   },
-  outlineBtnText: { fontSize: 12, color: '#374151', fontWeight: '500' },
+  outlineBtnText: { fontSize: 12, color: '#374151', fontWeight: '600' },
   primaryBtn: {
     backgroundColor: '#c75a28',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    shadowColor: '#c75a28',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  primaryBtnText: { fontSize: 12, color: '#fff', fontWeight: '700' },
+  primaryBtnText: { fontSize: 12, color: '#fff', fontWeight: '800' },
 });

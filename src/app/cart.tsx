@@ -23,11 +23,11 @@ const initialItems: CartItem[] = [
 
 function PriceRow({ label, value, green, bold }: { label: string; value: string; green?: boolean; bold?: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <Text style={[s.rowLabel, bold && { color: '#111827', fontWeight: '700', fontSize: 15 }]}>
         {label}
       </Text>
-      <Text style={[s.rowValue, green && { color: '#2d8a4e' }, bold && { color: '#c75a28', fontWeight: '700', fontSize: 15 }]}>
+      <Text style={[s.rowValue, green && { color: '#2d8a4e', fontWeight: '700' }, bold && { color: '#c75a28', fontWeight: '800', fontSize: 16 }]}>
         {value}
       </Text>
     </View>
@@ -57,25 +57,29 @@ export default function CartScreen() {
       <SafeAreaView edges={['top']}>
         <View style={s.header}>
           <Text style={s.title}>Shopping Cart</Text>
-          <Text style={s.subtitle}>{items.length} items</Text>
+          <View style={s.itemCountBadge}>
+            <Text style={s.itemCountText}>{items.length} items</Text>
+          </View>
         </View>
 
         {/* Delivery Address */}
         <View style={s.section}>
-          <View style={s.card}>
+          <Pressable
+            style={({ pressed }) => [s.card, pressed && { opacity: 0.88 }]}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
-                <Text style={{ fontSize: 16 }}>📍</Text>
+              <View style={{ flexDirection: 'row', gap: 10, flex: 1 }}>
+                <View style={s.addrIconWrap}>
+                  <Text style={{ fontSize: 16 }}>📍</Text>
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.addrTitle}>Delivering to Home</Text>
                   <Text style={s.addrSub}>Plot 123, Kukatpally, Hyderabad - 500072</Text>
                 </View>
               </View>
-              <Pressable>
-                <Text style={s.changeBtn}>Change</Text>
-              </Pressable>
+              <Text style={s.changeBtn}>Change</Text>
             </View>
-          </View>
+          </Pressable>
         </View>
 
         {/* Cart Items */}
@@ -84,29 +88,39 @@ export default function CartScreen() {
             <View key={i} style={s.card}>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={s.itemImg}>
-                  <Text style={{ fontSize: 30 }}>{item.image}</Text>
+                  <Text style={{ fontSize: 32 }}>{item.image}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.itemName} numberOfLines={1}>{item.name}</Text>
                       <Text style={s.itemVendor}>{item.vendor}</Text>
-                      <View style={{ marginTop: 4 }}>
+                      <View style={{ marginTop: 5 }}>
                         <ShippabilityBadge level={item.shippability} />
                       </View>
                     </View>
-                    <Pressable onPress={() => removeItem(i)} style={{ padding: 4 }}>
-                      <Text style={{ color: '#9ca3af', fontSize: 16 }}>✕</Text>
+                    <Pressable
+                      onPress={() => removeItem(i)}
+                      style={({ pressed }) => [s.removeBtn, pressed && { opacity: 0.6, transform: [{ scale: 0.85 }] }]}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={s.removeBtnText}>✕</Text>
                     </Pressable>
                   </View>
                   <View style={s.itemBottom}>
                     <View style={s.qtyRow}>
-                      <Pressable onPress={() => updateQty(i, -1)} style={s.qtyBtn}>
+                      <Pressable
+                        onPress={() => updateQty(i, -1)}
+                        style={({ pressed }) => [s.qtyBtn, s.qtyBtnMinus, pressed && { opacity: 0.7 }]}
+                      >
                         <Text style={s.qtyBtnText}>−</Text>
                       </Pressable>
                       <Text style={s.qtyText}>{item.quantity}</Text>
-                      <Pressable onPress={() => updateQty(i, 1)} style={s.qtyBtn}>
-                        <Text style={s.qtyBtnText}>+</Text>
+                      <Pressable
+                        onPress={() => updateQty(i, 1)}
+                        style={({ pressed }) => [s.qtyBtn, s.qtyBtnPlus, pressed && { opacity: 0.7 }]}
+                      >
+                        <Text style={[s.qtyBtnText, { color: '#fff' }]}>+</Text>
                       </Pressable>
                     </View>
                     <Text style={s.itemPrice}>₹{item.price * item.quantity}</Text>
@@ -119,13 +133,15 @@ export default function CartScreen() {
 
         {/* Coupon */}
         <View style={s.section}>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
             <TextInput
               style={s.couponInput}
               placeholder="Enter coupon code"
               placeholderTextColor="#9ca3af"
             />
-            <Pressable style={s.applyBtn}>
+            <Pressable
+              style={({ pressed }) => [s.applyBtn, pressed && { opacity: 0.82, transform: [{ scale: 0.97 }] }]}
+            >
               <Text style={s.applyBtnText}>Apply</Text>
             </Pressable>
           </View>
@@ -133,22 +149,24 @@ export default function CartScreen() {
 
         {/* Price Summary */}
         <View style={s.section}>
-          <View style={[s.card, { backgroundColor: '#f9fafb' }]}>
+          <View style={[s.card, { backgroundColor: '#fafafa' }]}>
             <Text style={s.summaryTitle}>Price Details</Text>
-            <View style={{ gap: 8, marginTop: 10 }}>
+            <View style={{ gap: 10, marginTop: 12 }}>
               <PriceRow label="Subtotal" value={`₹${subtotal}`} />
               <PriceRow label="Delivery Fee" value={`₹${delivery}`} />
               <PriceRow label="Coupon Discount" value={`-₹${discount}`} green />
               <View style={s.divider} />
-              <PriceRow label="Total" value={`₹${total}`} bold />
+              <PriceRow label="Total Payable" value={`₹${total}`} bold />
             </View>
           </View>
         </View>
 
         {/* Checkout */}
-        <View style={s.section}>
-          <Pressable style={s.checkoutBtn}>
-            <Text style={s.checkoutBtnText}>Proceed to Checkout</Text>
+        <View style={[s.section, { paddingBottom: 12 }]}>
+          <Pressable
+            style={({ pressed }) => [s.checkoutBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+          >
+            <Text style={s.checkoutBtnText}>Proceed to Checkout  →</Text>
           </Pressable>
           <Text style={s.terms}>By placing order, you agree to our Terms & Conditions</Text>
         </View>
@@ -160,91 +178,144 @@ export default function CartScreen() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f9fafb' },
-  header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  title: { fontSize: 20, fontWeight: '700', color: '#111827' },
-  subtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  screen: { flex: 1, backgroundColor: '#f5f5f7' },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  title: { fontSize: 22, fontWeight: '800', color: '#111827' },
+  itemCountBadge: {
+    backgroundColor: '#fff3ef',
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#fdc9b0',
+  },
+  itemCountText: { fontSize: 11, color: '#9a3412', fontWeight: '700' },
+
   section: { paddingHorizontal: 16, paddingTop: 12 },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#f0f0f3',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 
-  addrTitle: { fontSize: 13, fontWeight: '600', color: '#111827' },
-  addrSub: { fontSize: 11, color: '#6b7280', marginTop: 2 },
-  changeBtn: { fontSize: 12, color: '#c75a28', fontWeight: '600' },
-
-  itemImg: {
-    width: 64,
-    height: 64,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
+  addrIconWrap: {
+    width: 36,
+    height: 36,
+    backgroundColor: '#fff7f5',
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itemName: { fontSize: 13, fontWeight: '600', color: '#111827' },
-  itemVendor: { fontSize: 10, color: '#6b7280' },
+  addrTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
+  addrSub: { fontSize: 11, color: '#6b7280', marginTop: 2, lineHeight: 16 },
+  changeBtn: { fontSize: 12, color: '#c75a28', fontWeight: '700' },
+
+  itemImg: {
+    width: 68,
+    height: 68,
+    backgroundColor: '#fff7f5',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemName: { fontSize: 13, fontWeight: '700', color: '#111827' },
+  itemVendor: { fontSize: 10, color: '#9ca3af', marginTop: 1 },
+  removeBtn: {
+    width: 28,
+    height: 28,
+    backgroundColor: '#fef2f2',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  removeBtnText: { color: '#ef4444', fontSize: 12, fontWeight: '700' },
   itemBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
   qtyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
     borderRadius: 10,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
-  qtyBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
-  qtyBtnText: { fontSize: 18, color: '#374151' },
+  qtyBtn: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  qtyBtnMinus: { backgroundColor: '#f3f4f6' },
+  qtyBtnPlus: { backgroundColor: '#c75a28' },
+  qtyBtnText: { fontSize: 18, color: '#374151', fontWeight: '700' },
   qtyText: {
-    width: 28,
+    width: 32,
     textAlign: 'center',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#111827',
+    backgroundColor: '#fff',
+    lineHeight: 34,
   },
-  itemPrice: { fontSize: 15, fontWeight: '700', color: '#c75a28' },
+  itemPrice: { fontSize: 16, fontWeight: '800', color: '#c75a28' },
 
   couponInput: {
     flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 42,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     fontSize: 13,
     color: '#111827',
   },
   applyBtn: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    height: 42,
+    backgroundColor: '#c75a28',
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    height: 46,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    shadowColor: '#c75a28',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  applyBtnText: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  applyBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
 
-  summaryTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  divider: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 4 },
+  summaryTitle: { fontSize: 15, fontWeight: '800', color: '#111827' },
+  divider: { height: 1, backgroundColor: '#f0f0f3', marginVertical: 2 },
   rowLabel: { fontSize: 13, color: '#6b7280' },
-  rowValue: { fontSize: 13, color: '#111827' },
+  rowValue: { fontSize: 13, color: '#111827', fontWeight: '600' },
 
   checkoutBtn: {
     backgroundColor: '#c75a28',
-    borderRadius: 12,
-    height: 50,
+    borderRadius: 16,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#c75a28',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
   },
-  checkoutBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  terms: { fontSize: 10, color: '#9ca3af', textAlign: 'center', marginTop: 8 },
+  checkoutBtnText: { color: '#fff', fontSize: 17, fontWeight: '800', letterSpacing: 0.3 },
+  terms: { fontSize: 10, color: '#9ca3af', textAlign: 'center', marginTop: 10 },
 });
