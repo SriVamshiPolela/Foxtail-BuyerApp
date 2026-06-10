@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 import { ShippabilityBadge } from '@/components/buyer-ui';
 import { PressableScale } from '@/components/pressable-scale';
@@ -158,7 +159,7 @@ export default function CartScreen() {
 
         {/* Checkout */}
         <View style={[s.section, { paddingBottom: 12 }]}>
-          <PressableScale style={s.checkoutBtn} scale={0.97}>
+          <PressableScale style={s.checkoutBtn} scale={0.97} onPress={() => router.push('/checkout')}>
             <Text style={s.checkoutBtnText}>Proceed to Checkout  →</Text>
           </PressableScale>
           <Text style={s.terms}>By placing order, you agree to our Terms & Conditions</Text>

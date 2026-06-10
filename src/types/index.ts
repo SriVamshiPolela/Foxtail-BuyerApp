@@ -66,3 +66,27 @@ export type Region = {
   icon: string;
   count: number;
 };
+
+export type PlacedOrderItem = {
+  productId: string;
+  name: string;
+  image: string;
+  qty: number;
+  price: number;
+};
+
+export type PlacedOrder = {
+  id: string;
+  date: string;
+  status: OrderStatus;
+  items: PlacedOrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  discount: number;
+  total: number;
+  vendor: string;
+  paymentMethod: string;
+  deliverySlot: string;
+  address: string;
+  expectedDelivery?: string;
+};
