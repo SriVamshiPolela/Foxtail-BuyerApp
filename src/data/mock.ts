@@ -156,8 +156,6 @@ export const products: Product[] = [
   },
 ];
 
-export const featuredProductIds = ['p1', 'p2', 'p3'];
-
 export const vendors: Vendor[] = [
   {
     id: 'v4',
@@ -189,15 +187,64 @@ export const vendors: Vendor[] = [
     description: 'Morning-fresh dairy products. FSSAI certified. Daily home delivery.',
     productCount: 12,
   },
+  {
+    id: 'v1',
+    name: 'Lakshmi Farms',
+    type: 'Spices & Herbs',
+    distance: '8.4 km',
+    rating: 4.8,
+    image: '🌿',
+    description: 'Certified organic spice farm in Erode. Stone-ground turmeric, pepper and chilli powders with no additives.',
+    productCount: 18,
+  },
+  {
+    id: 'v5',
+    name: 'Krishna Farms',
+    type: 'Grains & Rice',
+    distance: '45 km',
+    rating: 4.7,
+    image: '🌾',
+    description: 'Traditional Sona Masoori rice growers from Krishna district, AP. SFA certified organic.',
+    productCount: 9,
+  },
+  {
+    id: 'v6',
+    name: 'Amma Kitchen',
+    type: 'Pickles & Preserves',
+    distance: '12 km',
+    rating: 4.9,
+    image: '👩‍🍳',
+    description: 'Home-style Andhra pickles and preserves using secret family recipes passed down for four generations.',
+    productCount: 22,
+  },
+  {
+    id: 'v7',
+    name: 'Desi Dairy',
+    type: 'Dairy & Ghee',
+    distance: '3.8 km',
+    rating: 4.8,
+    image: '🫙',
+    description: 'A2 milk and bilona ghee from free-grazing cows. Zero additives, small-batch quality.',
+    productCount: 8,
+  },
+  {
+    id: 'v8',
+    name: 'Kulal Artisans',
+    type: 'Pottery & Crafts',
+    distance: '6.2 km',
+    rating: 4.6,
+    image: '🏺',
+    description: 'Traditional clay pottery from Nizamabad. Hand-thrown and wood-kiln fired. Food-safe, lead-free.',
+    productCount: 35,
+  },
 ];
 
 export const categories: Category[] = [
-  { id: 'fresh-produce', name: 'Fresh Produce', icon: '🥬', count: 234 },
-  { id: 'dairy',         name: 'Dairy & Milk',  icon: '🥛', count: 89 },
-  { id: 'handloom',      name: 'Handloom',       icon: '🧣', count: 156 },
-  { id: 'spices',        name: 'Spices',         icon: '🌶️', count: 312 },
-  { id: 'pottery',       name: 'Pottery',        icon: '🏺', count: 78 },
-  { id: 'pickles',       name: 'Pickles',        icon: '🫙', count: 145 },
+  { id: 'farm_products',   name: 'Farm Products',   icon: '🌾', count: 234 },
+  { id: 'processed_foods', name: 'Processed Foods', icon: '🫙', count: 145 },
+  { id: 'foods',           name: 'Foods',           icon: '🍱', count: 89 },
+  { id: 'arts_handmade',   name: 'Arts & Handmade', icon: '🎨', count: 156 },
+  { id: 'services',        name: 'Services',        icon: '🔧', count: 312 },
 ];
 
 export const regions: Region[] = [

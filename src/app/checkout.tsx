@@ -7,6 +7,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { useCartStore, cartSubtotal } from '@/store/cart';
 import { useOrderStore } from '@/store/orders';
 import { useUserStore } from '@/store/user';
+import type { Address } from '@/store/user';
 
 const DELIVERY_SLOTS = [
   { id: 'today',    icon: '⚡', label: 'Today',     sub: '4 PM – 6 PM' },
@@ -42,7 +43,9 @@ export default function CheckoutScreen() {
   const clearCart = useCartStore((s) => s.clearCart);
   const placeOrder = useOrderStore((s) => s.placeOrder);
   const location = useUserStore((s) => s.location);
-  const district = useUserStore((s) => s.district);
+  const addresses = useUserStore((s) => s.addresses);
+  const selectedAddressId = useUserStore((s) => s.selectedAddressId);
+  const selectedAddress: Address | undefined = addresses.find((a) => a.id === selectedAddressId);
 
   const [selectedSlot, setSelectedSlot] = useState('today');
   const [selectedPayment, setSelectedPayment] = useState('upi');
@@ -52,7 +55,10 @@ export default function CheckoutScreen() {
   const total = subtotal + delivery - discount;
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
   const vendorCount = new Set(items.map((i) => i.product.vendorId)).size;
-  const address = `Plot 123, ${location}, Hyderabad - 500072`;
+
+  const addressString = selectedAddress
+    ? `${selectedAddress.line1}${selectedAddress.line2 ? ', ' + selectedAddress.line2 : ''}, ${selectedAddress.city} - ${selectedAddress.pincode}`
+    : `${location}, Hyderabad - 500072`;
 
   const activeSlot = DELIVERY_SLOTS.find((sl) => sl.id === selectedSlot)!;
   const slotLabel = `${activeSlot.label} ${activeSlot.sub}`;
@@ -74,7 +80,7 @@ export default function CheckoutScreen() {
       vendor: vendorCount > 1 ? 'Multiple Vendors' : (items[0]?.product.vendor ?? ''),
       paymentMethod: paymentLabel,
       deliverySlot: slotLabel,
-      address,
+      address: addressString,
       expectedDelivery: selectedSlot === 'today' ? 'Today by 6 PM' : 'Tomorrow by 12 PM',
     });
     clearCart();
@@ -100,15 +106,35 @@ export default function CheckoutScreen() {
         {/* Deliver To */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Deliver To</Text>
-          <PressableScale style={s.card} scale={0.99}>
+          <PressableScale
+            style={s.card}
+            scale={0.99}
+            onPress={() => router.push({ pathname: '/address-book', params: { select: '1' } })}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={s.addrIcon}><Text style={{ fontSize: 18 }}>📍</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.addrTitle}>Home</Text>
-                <Text style={s.addrSub}>{address}</Text>
-                <Text style={s.addrDistrict}>{district}</Text>
+              <View style={s.addrIcon}>
+                <Text style={{ fontSize: 18 }}>
+                  {selectedAddress?.label === 'Work' ? '🏢' : selectedAddress?.label === 'Other' ? '📍' : '🏠'}
+                </Text>
               </View>
-              <Text style={s.changeText}>Change</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.addrTitle}>
+                  {selectedAddress?.label ?? 'Home'}
+                  {selectedAddress?.isDefault && (
+                    <Text style={s.addrDefaultBadge}>  Default</Text>
+                  )}
+                </Text>
+                {selectedAddress ? (
+                  <>
+                    <Text style={s.addrName}>{selectedAddress.name}  ·  {selectedAddress.phone}</Text>
+                    <Text style={s.addrSub}>{selectedAddress.line1}{selectedAddress.line2 ? ', ' + selectedAddress.line2 : ''}</Text>
+                    <Text style={s.addrDistrict}>{selectedAddress.city} – {selectedAddress.pincode}, {selectedAddress.district}</Text>
+                  </>
+                ) : (
+                  <Text style={s.addrSub}>{addressString}</Text>
+                )}
+              </View>
+              <Text style={s.changeText}>Change ›</Text>
             </View>
           </PressableScale>
         </View>
@@ -246,6 +272,8 @@ const s = StyleSheet.create({
     borderRadius: 22, alignItems: 'center', justifyContent: 'center',
   },
   addrTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  addrDefaultBadge: { fontSize: 10, color: '#c75a28', fontWeight: '600' },
+  addrName: { fontSize: 11, color: '#374151', fontWeight: '600', marginTop: 1 },
   addrSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   addrDistrict: { fontSize: 10, color: '#9ca3af', marginTop: 1 },
   changeText: { fontSize: 13, color: '#c75a28', fontWeight: '700' },

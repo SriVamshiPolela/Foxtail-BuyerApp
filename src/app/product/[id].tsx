@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TrustBadge, ShippabilityBadge } from '@/components/buyer-ui';
 import { PressableScale } from '@/components/pressable-scale';
+import { WishlistButton } from '@/components/wishlist-button';
 import { getProductById } from '@/services/products';
 import { useCartStore } from '@/store/cart';
 import type { Product } from '@/types';
@@ -69,12 +70,7 @@ export default function ProductDetailScreen() {
           <Text style={s.iconBtnText}>← Back</Text>
         </Pressable>
         <Text style={s.topBarTitle} numberOfLines={1}>{product.name}</Text>
-        <Pressable
-          style={({ pressed }) => [s.iconBtn, s.wishIconBtn, pressed && { opacity: 0.6 }]}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={{ fontSize: 20 }}>🤍</Text>
-        </Pressable>
+        <WishlistButton productId={id} style={[s.iconBtn, s.wishIconBtn]} size={20} />
       </SafeAreaView>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -98,6 +94,15 @@ export default function ProductDetailScreen() {
             <Text style={s.dotSep}>·</Text>
             <Text style={s.locationText}>📍 {product.location}</Text>
           </View>
+
+          {product.vendorId && (
+            <Pressable
+              onPress={() => router.push(`/vendor/${product.vendorId}`)}
+              style={({ pressed }) => [s.visitStoreBtn, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={s.visitStoreTxt}>🏪  Visit Store →</Text>
+            </Pressable>
+          )}
 
           <View style={s.ratingRow}>
             <Text style={s.ratingStars}>★ {product.rating}</Text>
@@ -229,6 +234,18 @@ const s = StyleSheet.create({
   vendorText: { fontSize: 13, fontWeight: '700', color: '#374151' },
   dotSep: { color: '#d1d5db', fontSize: 14 },
   locationText: { fontSize: 12, color: '#9ca3af' },
+
+  visitStoreBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff7f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#fdc9b0',
+    marginBottom: 12,
+  },
+  visitStoreTxt: { fontSize: 12, color: '#c75a28', fontWeight: '700' },
 
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   ratingStars: { fontSize: 14, fontWeight: '800', color: '#c75a28' },

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
 import { RangoliBorder, TrustBadge, ShippabilityBadge } from '@/components/buyer-ui';
 import { PressableScale } from '@/components/pressable-scale';
+import { CartButton } from '@/components/cart-button';
+import { WishlistButton } from '@/components/wishlist-button';
 import { getFeaturedProducts, getCategories, getVendors } from '@/services/products';
-import { useCartStore } from '@/store/cart';
 import { useUserStore } from '@/store/user';
 import type { Product, Category, Vendor } from '@/types';
 
@@ -16,7 +17,6 @@ export default function HomeScreen() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const addItem = useCartStore((s) => s.addItem);
   const location = useUserStore((s) => s.location);
   const district = useUserStore((s) => s.district);
 
@@ -52,6 +52,7 @@ export default function HomeScreen() {
                 <Text>🔔</Text>
               </Pressable>
               <Pressable
+                onPress={() => router.push('/favorites')}
                 style={({ pressed }) => [s.hBtn, pressed && { opacity: 0.65, transform: [{ scale: 0.9 }] }]}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -67,20 +68,13 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
 
-          <View style={s.searchRow}>
+          <Pressable style={s.searchRow} onPress={() => router.push('/search')}>
             <Text style={s.searchIcon}>🔍</Text>
-            <TextInput
-              style={s.searchInput}
-              placeholder="Search vegetables, handlooms, spices..."
-              placeholderTextColor="#9ca3af"
-            />
-            <Pressable
-              style={({ pressed }) => [s.filterBtn, pressed && { opacity: 0.7, backgroundColor: '#e5e7eb' }]}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
+            <Text style={s.searchPlaceholder}>Search vegetables, handlooms, spices...</Text>
+            <View style={s.filterBtn}>
               <Text style={{ fontSize: 13 }}>⚙️</Text>
-            </Pressable>
-          </View>
+            </View>
+          </Pressable>
         </SafeAreaView>
       </View>
 
@@ -112,7 +106,10 @@ export default function HomeScreen() {
         <View style={s.catSection}>
           <View style={[s.sectionHead, { paddingHorizontal: 16 }]}>
             <Text style={s.sectionTitle}>Shop by Category</Text>
-            <Pressable style={({ pressed }) => pressed && { opacity: 0.6 }}>
+            <Pressable
+              onPress={() => router.navigate('/(tabs)/explore')}
+              style={({ pressed }) => pressed && { opacity: 0.6 }}
+            >
               <Text style={s.seeAll}>View All ›</Text>
             </Pressable>
           </View>
@@ -122,7 +119,7 @@ export default function HomeScreen() {
             contentContainerStyle={s.catScroll}
           >
             {categories.map((c) => (
-              <PressableScale key={c.id} style={s.catCard} scale={0.93}>
+              <PressableScale key={c.id} style={s.catCard} scale={0.93} onPress={() => router.push(`/category/${c.id}`)}>
                 <View style={s.catIcon}>
                   <Text style={{ fontSize: 26 }}>{c.icon}</Text>
                 </View>
@@ -144,14 +141,17 @@ export default function HomeScreen() {
               <Text style={s.sectionTitle}>Near Your Mandal</Text>
               <Text style={s.sectionSub}>{location}, {district}</Text>
             </View>
-            <Pressable style={({ pressed }) => pressed && { opacity: 0.6 }}>
+            <Pressable
+              onPress={() => router.push('/vendors')}
+              style={({ pressed }) => pressed && { opacity: 0.6 }}
+            >
               <Text style={s.seeAll}>See All ›</Text>
             </Pressable>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', gap: 12, paddingBottom: 4 }}>
               {vendors.map((v) => (
-                <PressableScale key={v.id} style={s.vendorCard} scale={0.97}>
+                <PressableScale key={v.id} style={s.vendorCard} scale={0.97} onPress={() => router.push(`/vendor/${v.id}`)}>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={s.vendorImg}><Text style={{ fontSize: 26 }}>{v.image}</Text></View>
                     <View style={{ flex: 1 }}>
@@ -173,7 +173,10 @@ export default function HomeScreen() {
         <View style={s.section}>
           <View style={s.sectionHead}>
             <Text style={s.sectionTitle}>Featured Products</Text>
-            <Pressable style={({ pressed }) => pressed && { opacity: 0.6 }}>
+            <Pressable
+              onPress={() => router.navigate('/(tabs)/explore')}
+              style={({ pressed }) => pressed && { opacity: 0.6 }}
+            >
               <Text style={s.seeAll}>View All ›</Text>
             </Pressable>
           </View>
@@ -193,12 +196,7 @@ export default function HomeScreen() {
                       <Text style={s.prodVendor}>{p.vendor}</Text>
                       <Text style={s.prodLoc}>📍 {p.location}</Text>
                     </View>
-                    <Pressable
-                      style={({ pressed }) => [s.wishBtn, pressed && { opacity: 0.6, transform: [{ scale: 0.85 }] }]}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <Text style={{ fontSize: 14 }}>🤍</Text>
-                    </Pressable>
+                    <WishlistButton productId={p.id} style={s.wishBtn} size={14} />
                   </View>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
                     {p.badges.map((b) => <TrustBadge key={b} type={b} small />)}
@@ -211,13 +209,7 @@ export default function HomeScreen() {
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 2 }}>
                       <Text style={s.prodRating}>★ {p.rating} ({p.reviews})</Text>
-                      <PressableScale
-                        onPress={() => addItem(p)}
-                        style={s.addCartBtn}
-                        scale={0.94}
-                      >
-                        <Text style={s.addCartTxt}>+ Add</Text>
-                      </PressableScale>
+                      <CartButton product={p} />
                     </View>
                   </View>
                 </View>
@@ -278,7 +270,7 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
   searchIcon: { marginRight: 8, fontSize: 14 },
-  searchInput: { flex: 1, fontSize: 13, color: '#111827' },
+  searchPlaceholder: { flex: 1, fontSize: 13, color: '#9ca3af' },
   filterBtn: {
     width: 32, height: 32, backgroundColor: '#f3f4f6', borderRadius: 9,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e5e7eb',
@@ -361,11 +353,6 @@ const s = StyleSheet.create({
   prodRating: { fontSize: 10, color: '#6b7280' },
   prodPrice: { fontSize: 15, fontWeight: '800', color: '#c75a28' },
   prodOrig: { fontSize: 10, color: '#9ca3af', textDecorationLine: 'line-through', marginTop: 1 },
-  addCartBtn: {
-    backgroundColor: '#c75a28', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
-    shadowColor: '#c75a28', shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2,
-  },
-  addCartTxt: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
   banner: {
     backgroundColor: '#c75a28', borderRadius: 20, padding: 20, overflow: 'hidden',

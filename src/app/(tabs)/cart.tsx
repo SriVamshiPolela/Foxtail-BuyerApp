@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { ShippabilityBadge } from '@/components/buyer-ui';
 import { PressableScale } from '@/components/pressable-scale';
 import { useCartStore, cartSubtotal } from '@/store/cart';
+import { useUserStore } from '@/store/user';
 
 function PriceRow({ label, value, green, bold }: { label: string; value: string; green?: boolean; bold?: boolean }) {
   return (
@@ -24,6 +25,10 @@ export default function CartScreen() {
   const updateQty = useCartStore((s) => s.updateQty);
   const subtotal = useCartStore(cartSubtotal);
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  const addresses = useUserStore((s) => s.addresses);
+  const selectedAddressId = useUserStore((s) => s.selectedAddressId);
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
 
   const [coupon, setCoupon] = useState('');
   const delivery = 40;
@@ -59,16 +64,33 @@ export default function CartScreen() {
 
         {/* Delivery Address */}
         <View style={s.section}>
-          <PressableScale style={s.card} scale={0.99}>
+          <PressableScale
+            style={s.card}
+            scale={0.99}
+            onPress={() => router.push({ pathname: '/address-book', params: { select: '1' } })}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flexDirection: 'row', gap: 10, flex: 1 }}>
-                <View style={s.addrIconWrap}><Text style={{ fontSize: 16 }}>📍</Text></View>
+                <View style={s.addrIconWrap}>
+                  <Text style={{ fontSize: 16 }}>
+                    {selectedAddress?.label === 'Work' ? '🏢' : selectedAddress?.label === 'Other' ? '📍' : '🏠'}
+                  </Text>
+                </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.addrTitle}>Delivering to Home</Text>
-                  <Text style={s.addrSub}>Plot 123, Kukatpally, Hyderabad - 500072</Text>
+                  <Text style={s.addrTitle}>
+                    Delivering to {selectedAddress?.label ?? 'Home'}
+                  </Text>
+                  <Text style={s.addrSub}>
+                    {selectedAddress
+                      ? `${selectedAddress.line1}, ${selectedAddress.city} - ${selectedAddress.pincode}`
+                      : 'Tap to add a delivery address'}
+                  </Text>
+                  {selectedAddress && (
+                    <Text style={s.addrName}>{selectedAddress.name}  ·  {selectedAddress.phone}</Text>
+                  )}
                 </View>
               </View>
-              <Text style={s.changeBtn}>Change</Text>
+              <Text style={s.changeBtn}>Change ›</Text>
             </View>
           </PressableScale>
         </View>
@@ -200,6 +222,7 @@ const s = StyleSheet.create({
   addrIconWrap: { width: 36, height: 36, backgroundColor: '#fff7f5', borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   addrTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
   addrSub: { fontSize: 11, color: '#6b7280', marginTop: 2, lineHeight: 16 },
+  addrName: { fontSize: 10, color: '#9ca3af', marginTop: 2 },
   changeBtn: { fontSize: 12, color: '#c75a28', fontWeight: '700' },
 
   itemImg: { width: 68, height: 68, backgroundColor: '#fff7f5', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

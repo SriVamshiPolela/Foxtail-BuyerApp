@@ -1,14 +1,16 @@
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 import { PressableScale } from '@/components/pressable-scale';
 import { useUserStore } from '@/store/user';
 import { useCartStore, cartItemCount } from '@/store/cart';
+import { useWishlistStore } from '@/store/wishlist';
 
 const menuItems = [
   { icon: '📦', label: 'My Orders',        desc: 'Track your purchases',       badgeKey: 'orders' as const },
-  { icon: '🤍', label: 'Wishlist',          desc: 'Your saved items',           badgeKey: 'wishlist' as const },
-  { icon: '📍', label: 'Saved Addresses',   desc: 'Manage delivery locations' },
+  { icon: '🤍', label: 'Wishlist',          desc: 'Your saved items',           badgeKey: 'wishlist' as const, route: '/favorites' as const },
+  { icon: '📍', label: 'Saved Addresses',   desc: 'Manage delivery locations',  route: '/address-book' as const },
   { icon: '💳', label: 'Payment Methods',   desc: 'Cards & UPI' },
   { icon: '👛', label: 'Harvest Wallet',    desc: 'Your balance',               badgeKey: 'wallet' as const, highlight: true },
   { icon: '🎁', label: 'Refer & Earn',      desc: 'Get ₹100 per referral' },
@@ -20,10 +22,11 @@ const menuItems = [
 export default function ProfileScreen() {
   const user = useUserStore();
   const cartCount = useCartStore(cartItemCount);
+  const wishlistCount = useWishlistStore((s) => s.favoriteIds.length);
 
   const getBadge = (key?: string) => {
     if (key === 'orders') return `${user.orderCount} total`;
-    if (key === 'wishlist') return `${user.wishlistCount} items`;
+    if (key === 'wishlist') return `${wishlistCount} items`;
     if (key === 'wallet') return `₹${user.walletBalance}`;
     return undefined;
   };
@@ -66,7 +69,7 @@ export default function ProfileScreen() {
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
-              <Text style={s.statVal}>{user.wishlistCount}</Text>
+              <Text style={s.statVal}>{wishlistCount}</Text>
               <Text style={s.statLbl}>Wishlist</Text>
             </View>
             <View style={s.statDivider} />
@@ -100,7 +103,7 @@ export default function ProfileScreen() {
         {menuItems.map((item, i) => {
           const badge = getBadge(item.badgeKey);
           return (
-            <PressableScale key={i} style={[s.menuItem, item.highlight && s.menuItemHL]} scale={0.985}>
+            <PressableScale key={i} style={[s.menuItem, item.highlight && s.menuItemHL]} scale={0.985} onPress={item.route ? () => router.push(item.route!) : undefined}>
               <View style={[s.menuIcon, item.highlight && s.menuIconHL]}>
                 <Text style={{ fontSize: 18 }}>{item.icon}</Text>
               </View>
