@@ -1,25 +1,20 @@
-import { useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { useState, useMemo } from 'react';
+import { ScrollView, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { PressableScale } from '@/components/pressable-scale';
-import { useCartStore, cartSubtotal } from '@/store/cart';
-import { useOrderStore } from '@/store/orders';
+import { useCartStore } from '@/store/cart';
 import { useUserStore } from '@/store/user';
+import { useAuthStore } from '@/store/auth';
+import { usePaymentStore } from '@/store/payment';
+import { placeOrder as callPlaceOrder } from '@/services/orders';
 import type { Address } from '@/store/user';
 
 const DELIVERY_SLOTS = [
   { id: 'today',    icon: '⚡', label: 'Today',     sub: '4 PM – 6 PM' },
   { id: 'tomorrow', icon: '🌅', label: 'Tomorrow',  sub: 'Before 12 PM' },
   { id: 'schedule', icon: '📅', label: 'Schedule',  sub: 'Pick a date' },
-];
-
-const PAYMENT_METHODS = [
-  { id: 'upi',    icon: '₹',  label: 'UPI',                  sub: 'PhonePe / GPay / BHIM' },
-  { id: 'card',   icon: '💳', label: 'Credit / Debit Card',  sub: null },
-  { id: 'cod',    icon: '💵', label: 'Cash on Delivery',     sub: 'Pay when delivered' },
-  { id: 'wallet', icon: '👛', label: 'Harvest Wallet',       sub: '₹250 available' },
 ];
 
 function PriceRow({ label, value, green, bold }: { label: string; value: string; green?: boolean; bold?: boolean }) {
@@ -38,53 +33,132 @@ function PriceRow({ label, value, green, bold }: { label: string; value: string;
 }
 
 export default function CheckoutScreen() {
-  const items = useCartStore((s) => s.items);
-  const subtotal = useCartStore(cartSubtotal);
+  const allItems  = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
-  const placeOrder = useOrderStore((s) => s.placeOrder);
-  const location = useUserStore((s) => s.location);
-  const addresses = useUserStore((s) => s.addresses);
+
+  const { selectedIds } = useLocalSearchParams<{ selectedIds?: string }>();
+  const selectedIdsSet  = useMemo(() => {
+    if (!selectedIds) return null;
+    return new Set(selectedIds.split(',').filter(Boolean));
+  }, [selectedIds]);
+
+  const items    = selectedIdsSet ? allItems.filter((i) => selectedIdsSet.has(i.product.id)) : allItems;
+  const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+
+  const location        = useUserStore((s) => s.location);
+  const district        = useUserStore((s) => s.district);
+  const name            = useUserStore((s) => s.name);
+  const phone           = useUserStore((s) => s.phone);
+  const addresses       = useUserStore((s) => s.addresses);
   const selectedAddressId = useUserStore((s) => s.selectedAddressId);
   const selectedAddress: Address | undefined = addresses.find((a) => a.id === selectedAddressId);
 
-  const [selectedSlot, setSelectedSlot] = useState('today');
-  const [selectedPayment, setSelectedPayment] = useState('upi');
+  const { userId, token } = useAuthStore();
+
+  const { upiIds, cards, codEnabled } = usePaymentStore();
+  const walletBalance = useUserStore((s) => s.walletBalance);
+  const defaultUPI    = upiIds.find((u) => u.isDefault);
+  const defaultCard   = cards.find((c) => c.isDefault);
+  const walletRupees  = walletBalance.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+  // Build dynamic payment methods from saved data
+  const PAYMENT_METHODS = [
+    ...(upiIds.length > 0
+      ? [{ id: 'upi', icon: '₹', label: 'UPI', sub: defaultUPI?.upiId ?? 'PhonePe / GPay / BHIM' }]
+      : [{ id: 'upi', icon: '₹', label: 'UPI', sub: 'PhonePe / GPay / BHIM' }]),
+    ...(cards.length > 0
+      ? [{ id: 'card', icon: '💳', label: 'Credit / Debit Card', sub: `•••• ${defaultCard?.last4 ?? '****'}` }]
+      : [{ id: 'card', icon: '💳', label: 'Credit / Debit Card', sub: null }]),
+    ...(codEnabled ? [{ id: 'cod', icon: '💵', label: 'Cash on Delivery', sub: 'Pay when delivered' }] : []),
+    {
+      id: 'wallet', icon: '👛', label: 'Harvest Wallet',
+      sub: walletBalance > 0 ? `₹${walletRupees} available` : 'No balance — add money first',
+      disabled: walletBalance === 0,
+    },
+  ];
+
+  const [selectedSlot,    setSelectedSlot]    = useState('today');
+  const [selectedPayment, setSelectedPayment] = useState<'upi' | 'card' | 'cod' | 'wallet'>('upi');
+  const [busy,            setBusy]            = useState(false);
+  const [orderError,      setOrderError]      = useState<string | null>(null);
 
   const delivery = 40;
   const discount = 50;
-  const total = subtotal + delivery - discount;
-  const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+  const total    = subtotal + delivery - discount;
+  const itemCount   = items.reduce((sum, i) => sum + i.quantity, 0);
   const vendorCount = new Set(items.map((i) => i.product.vendorId)).size;
 
   const addressString = selectedAddress
     ? `${selectedAddress.line1}${selectedAddress.line2 ? ', ' + selectedAddress.line2 : ''}, ${selectedAddress.city} - ${selectedAddress.pincode}`
     : `${location}, Hyderabad - 500072`;
 
-  const activeSlot = DELIVERY_SLOTS.find((sl) => sl.id === selectedSlot)!;
-  const slotLabel = `${activeSlot.label} ${activeSlot.sub}`;
+  const activeSlot   = DELIVERY_SLOTS.find((sl) => sl.id === selectedSlot)!;
+  const slotLabel    = `${activeSlot.label} ${activeSlot.sub}`;
   const paymentLabel = PAYMENT_METHODS.find((p) => p.id === selectedPayment)?.label ?? selectedPayment;
 
-  const handlePlaceOrder = () => {
-    const orderId = placeOrder({
-      items: items.map((i) => ({
-        productId: i.product.id,
-        name: i.product.name,
-        image: i.product.image,
-        qty: i.quantity,
-        price: i.product.price,
-      })),
-      subtotal,
-      deliveryFee: delivery,
-      discount,
-      total,
-      vendor: vendorCount > 1 ? 'Multiple Vendors' : (items[0]?.product.vendor ?? ''),
-      paymentMethod: paymentLabel,
-      deliverySlot: slotLabel,
-      address: addressString,
-      expectedDelivery: selectedSlot === 'today' ? 'Today by 6 PM' : 'Tomorrow by 12 PM',
-    });
-    clearCart();
-    router.replace({ pathname: '/order-confirmed', params: { orderId } });
+  const handlePlaceOrder = async () => {
+    if (busy || items.length === 0) return;
+    if (!userId || !token) {
+      setOrderError('Please log in to continue.');
+      return;
+    }
+
+    setOrderError(null);
+    setBusy(true);
+    try {
+      const addr = selectedAddress
+        ? {
+            label:    selectedAddress.label,
+            line1:    selectedAddress.line1,
+            line2:    selectedAddress.line2 || undefined,
+            city:     selectedAddress.city,
+            district: selectedAddress.district,
+            state:    selectedAddress.state,
+            pincode:  selectedAddress.pincode.length === 6 ? selectedAddress.pincode : '500072',
+            lat:      0,
+            lng:      0,
+          }
+        : {
+            label:    'Home',
+            line1:    location,
+            city:     location,
+            district: district.split(',')[0]?.trim() ?? 'Hyderabad',
+            state:    'Telangana',
+            pincode:  '500072',
+            lat:      0,
+            lng:      0,
+          };
+
+      const placed = await callPlaceOrder(
+        {
+          buyerId:   userId,
+          buyerName: name || 'Buyer',
+          buyerPhone: phone || '0000000000',
+          items: items.map((i) => ({
+            productId:   i.product.id,
+            productName: i.product.name,
+            sellerId:    i.product.vendorId,
+            sellerName:  i.product.vendor,
+            quantity:    i.quantity,
+            unitPrice:   Math.round(i.product.price * 100),  // rupees → paise
+            unit:        'piece',
+          })),
+          deliveryAddress: addr,
+          paymentMethod: selectedPayment,
+        },
+        token,
+      );
+
+      clearCart();
+      router.replace({
+        pathname: '/order-confirmed',
+        params: { orderId: placed.id, slot: slotLabel, payment: paymentLabel },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      setOrderError(msg);
+      setBusy(false);
+    }
   };
 
   return (
@@ -92,7 +166,7 @@ export default function CheckoutScreen() {
       {/* Top Bar */}
       <SafeAreaView edges={['top']} style={s.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/cart')}
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -103,6 +177,17 @@ export default function CheckoutScreen() {
       </SafeAreaView>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Error Banner */}
+        {orderError && (
+          <View style={s.errorBanner}>
+            <Text style={s.errorIcon}>⚠️</Text>
+            <Text style={s.errorMsg}>{orderError}</Text>
+            <Pressable onPress={() => setOrderError(null)} hitSlop={8}>
+              <Text style={s.errorClose}>✕</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Deliver To */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Deliver To</Text>
@@ -172,8 +257,8 @@ export default function CheckoutScreen() {
             {PAYMENT_METHODS.map((pm, i) => (
               <View key={pm.id}>
                 <Pressable
-                  onPress={() => setSelectedPayment(pm.id)}
-                  style={({ pressed }) => [s.pmRow, pressed && { backgroundColor: '#fafafa' }]}
+                  onPress={() => !('disabled' in pm && pm.disabled) && setSelectedPayment(pm.id as 'upi' | 'card' | 'cod' | 'wallet')}
+                  style={({ pressed }) => [s.pmRow, pressed && !('disabled' in pm && pm.disabled) && { backgroundColor: '#fafafa' }, ('disabled' in pm && pm.disabled) && { opacity: 0.45 }]}
                 >
                   <View style={[s.pmIcon, pm.id === selectedPayment && s.pmIconActive]}>
                     <Text style={{ fontSize: pm.id === 'upi' ? 13 : 16, fontWeight: '700', color: pm.id === 'upi' ? '#c75a28' : '#374151' }}>
@@ -208,11 +293,11 @@ export default function CheckoutScreen() {
               </Text>
             </Text>
             <View style={s.divider} />
-            <PriceRow label="Subtotal" value={`₹${subtotal}`} />
-            <PriceRow label="Delivery Fee" value={`₹${delivery}`} />
+            <PriceRow label="Subtotal"       value={`₹${subtotal}`} />
+            <PriceRow label="Delivery Fee"   value={`₹${delivery}`} />
             <PriceRow label="Coupon Discount" value={`-₹${discount}`} green />
             <View style={s.divider} />
-            <PriceRow label="Total Payable" value={`₹${total}`} bold />
+            <PriceRow label="Total Payable"  value={`₹${total}`} bold />
           </View>
         </View>
 
@@ -221,11 +306,21 @@ export default function CheckoutScreen() {
 
       {/* Sticky Place Order Bar */}
       <SafeAreaView edges={['bottom']} style={s.bottomBar}>
-        <PressableScale style={s.placeOrderBtn} scale={0.97} onPress={handlePlaceOrder}>
-          <Text style={s.placeOrderText}>Place Order</Text>
-          <View style={s.placeOrderBadge}>
-            <Text style={s.placeOrderBadgeText}>₹{total}</Text>
-          </View>
+        <PressableScale
+          style={[s.placeOrderBtn, (busy || items.length === 0) && { opacity: 0.6 }]}
+          scale={0.97}
+          onPress={handlePlaceOrder}
+        >
+          {busy ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Text style={s.placeOrderText}>Place Order</Text>
+              <View style={s.placeOrderBadge}>
+                <Text style={s.placeOrderBadgeText}>₹{total}</Text>
+              </View>
+            </>
+          )}
         </PressableScale>
       </SafeAreaView>
     </View>
@@ -314,6 +409,16 @@ const s = StyleSheet.create({
   },
   radioActive: { borderColor: '#c75a28' },
   radioDot: { width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#c75a28' },
+
+  errorBanner: {
+    marginHorizontal: 16, marginTop: 12,
+    backgroundColor: '#fef2f2', borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: '#fecaca',
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  errorIcon: { fontSize: 16 },
+  errorMsg: { flex: 1, fontSize: 13, color: '#dc2626', fontWeight: '600', lineHeight: 18 },
+  errorClose: { fontSize: 14, color: '#dc2626', fontWeight: '700' },
 
   divider: { height: 1, backgroundColor: '#f0f0f3' },
   itemsSummary: { fontSize: 13, color: '#6b7280' },

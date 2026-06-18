@@ -1,13 +1,47 @@
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 
 import { PressableScale } from '@/components/pressable-scale';
-import { useOrderStore } from '@/store/orders';
+import { fetchOrderById } from '@/services/orders';
+import { useAuthStore } from '@/store/auth';
+import type { ApiOrder } from '@/services/orders';
+
+function mapPaymentLabel(method: string): string {
+  const map: Record<string, string> = {
+    upi:    'UPI',
+    card:   'Credit / Debit Card',
+    cod:    'Cash on Delivery',
+    wallet: 'Harvest Wallet',
+  };
+  return map[method] ?? method;
+}
 
 export default function OrderConfirmedScreen() {
-  const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const order = useOrderStore((s) => s.getById(orderId));
+  const { orderId, slot, payment } = useLocalSearchParams<{
+    orderId: string; slot: string; payment: string;
+  }>();
+  const { token } = useAuthStore();
+
+  const [order,   setOrder]   = useState<ApiOrder | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!orderId || !token) { setLoading(false); return; }
+    fetchOrderById(orderId, token)
+      .then(setOrder)
+      .finally(() => setLoading(false));
+  }, [orderId, token]);
+
+  if (loading) {
+    return (
+      <View style={s.center}>
+        <ActivityIndicator size="large" color="#c75a28" />
+        <Text style={{ color: '#9ca3af', marginTop: 12, fontSize: 13 }}>Loading order details…</Text>
+      </View>
+    );
+  }
 
   if (!order) {
     return (
@@ -21,7 +55,18 @@ export default function OrderConfirmedScreen() {
     );
   }
 
-  const itemCount = order.items.reduce((sum, i) => sum + i.qty, 0);
+  const itemCount  = order.items.reduce((sum, i) => sum + i.quantity, 0);
+  const totalRs    = Math.round(order.total / 100);
+
+  const addr = order.deliveryAddress;
+  const addressStr = [addr.line1, addr.line2, addr.city, addr.pincode]
+    .filter(Boolean).join(', ');
+
+  const deliveryLabel = slot ?? (order.estimatedDelivery
+    ? new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+    : 'To be confirmed');
+
+  const paymentDisplay = payment ?? mapPaymentLabel(order.paymentMethod);
 
   return (
     <View style={s.screen}>
@@ -47,7 +92,7 @@ export default function OrderConfirmedScreen() {
               <View style={s.infoIcon}><Text style={{ fontSize: 22 }}>🚚</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.infoLabel}>Estimated Delivery</Text>
-                <Text style={s.infoValue}>{order.deliverySlot}</Text>
+                <Text style={s.infoValue}>{deliveryLabel}</Text>
               </View>
             </View>
           </View>
@@ -60,7 +105,7 @@ export default function OrderConfirmedScreen() {
               <View style={s.infoIcon}><Text style={{ fontSize: 22 }}>💳</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.infoLabel}>Payment Method</Text>
-                <Text style={s.infoValue}>{order.paymentMethod}</Text>
+                <Text style={s.infoValue}>{paymentDisplay}</Text>
               </View>
               <View style={s.confirmedBadge}>
                 <Text style={s.confirmedText}>Confirmed</Text>
@@ -77,13 +122,13 @@ export default function OrderConfirmedScreen() {
               <View key={item.productId}>
                 <View style={s.itemRow}>
                   <View style={s.itemEmoji}>
-                    <Text style={{ fontSize: 28 }}>{item.image}</Text>
+                    <Text style={{ fontSize: 28 }}>📦</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.itemName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={s.itemQty}>Qty: {item.qty}</Text>
+                    <Text style={s.itemName} numberOfLines={1}>{item.productName}</Text>
+                    <Text style={s.itemQty}>Qty: {item.quantity}</Text>
                   </View>
-                  <Text style={s.itemPrice}>₹{item.price * item.qty}</Text>
+                  <Text style={s.itemPrice}>₹{Math.round(item.totalPrice / 100)}</Text>
                 </View>
                 {i < order.items.length - 1 && <View style={s.divider} />}
               </View>
@@ -91,7 +136,7 @@ export default function OrderConfirmedScreen() {
             <View style={[s.divider, { marginTop: 4 }]} />
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Total Paid</Text>
-              <Text style={s.totalValue}>₹{order.total}</Text>
+              <Text style={s.totalValue}>₹{totalRs}</Text>
             </View>
           </View>
         </View>
@@ -102,7 +147,7 @@ export default function OrderConfirmedScreen() {
           <View style={s.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={s.infoIcon}><Text style={{ fontSize: 18 }}>📍</Text></View>
-              <Text style={s.addrText}>{order.address}</Text>
+              <Text style={s.addrText}>{addressStr}</Text>
             </View>
           </View>
         </View>

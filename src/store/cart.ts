@@ -1,56 +1,61 @@
 import { create } from 'zustand';
-
-import { products, initialCartProductIds } from '@/data/mock';
+import { upsertCartItem, removeCartItem, clearCart as apiClearCart } from '@/services/cart';
+import { useAuthStore } from '@/store/auth';
 import type { CartItem, Product } from '@/types';
 
 type CartStore = {
-  items: CartItem[];
-  addItem: (product: Product, qty?: number) => void;
+  items:    CartItem[];
+  hydrated: boolean;
+  hydrate:    (items: CartItem[]) => void;
+  addItem:    (product: Product, qty?: number) => void;
   removeItem: (productId: string) => void;
-  updateQty: (productId: string, delta: number) => void;
-  clearCart: () => void;
+  updateQty:  (productId: string, delta: number) => void;
+  clearCart:  () => void;
 };
 
-const seedItems: CartItem[] = initialCartProductIds
-  .map((id) => products.find((p) => p.id === id))
-  .filter(Boolean)
-  .map((p, i) => ({ product: p as Product, quantity: i === 1 ? 3 : i === 0 ? 2 : 1 }));
+export const useCartStore = create<CartStore>((set, get) => ({
+  items:    [],
+  hydrated: false,
 
-export const useCartStore = create<CartStore>((set) => ({
-  items: seedItems,
+  hydrate: (items) => set({ items, hydrated: true }),
 
-  addItem: (product, qty = 1) =>
-    set((state) => {
-      const existing = state.items.find((i) => i.product.id === product.id);
-      if (existing) {
-        return {
-          items: state.items.map((i) =>
-            i.product.id === product.id ? { ...i, quantity: i.quantity + qty } : i,
-          ),
-        };
-      }
-      return { items: [...state.items, { product, quantity: qty }] };
-    }),
+  addItem: (product, qty = 1) => {
+    set((s) => {
+      const existing = s.items.find((i) => i.product.id === product.id);
+      return existing
+        ? { items: s.items.map((i) => i.product.id === product.id ? { ...i, quantity: i.quantity + qty } : i) }
+        : { items: [...s.items, { product, quantity: qty }] };
+    });
+    const { userId, token } = useAuthStore.getState();
+    if (!userId || !token) return;
+    const item = get().items.find((i) => i.product.id === product.id);
+    if (item) upsertCartItem(userId, item, token).catch(() => {});
+  },
 
-  removeItem: (productId) =>
-    set((state) => ({
-      items: state.items.filter((i) => i.product.id !== productId),
-    })),
+  removeItem: (productId) => {
+    set((s) => ({ items: s.items.filter((i) => i.product.id !== productId) }));
+    const { userId, token } = useAuthStore.getState();
+    if (userId && token) removeCartItem(userId, productId, token).catch(() => {});
+  },
 
-  updateQty: (productId, delta) =>
-    set((state) => ({
-      items: state.items.map((i) =>
-        i.product.id === productId
-          ? { ...i, quantity: Math.max(1, i.quantity + delta) }
-          : i,
+  updateQty: (productId, delta) => {
+    set((s) => ({
+      items: s.items.map((i) =>
+        i.product.id === productId ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i,
       ),
-    })),
+    }));
+    const { userId, token } = useAuthStore.getState();
+    if (!userId || !token) return;
+    const item = get().items.find((i) => i.product.id === productId);
+    if (item) upsertCartItem(userId, item, token).catch(() => {});
+  },
 
-  clearCart: () => set({ items: [] }),
+  clearCart: () => {
+    set({ items: [] });
+    const { userId, token } = useAuthStore.getState();
+    if (userId && token) apiClearCart(userId, token).catch(() => {});
+  },
 }));
 
-export const cartItemCount = (state: CartStore) =>
-  state.items.reduce((sum, i) => sum + i.quantity, 0);
-
-export const cartSubtotal = (state: CartStore) =>
-  state.items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+export const cartItemCount = (s: CartStore) => s.items.reduce((n, i) => n + i.quantity, 0);
+export const cartSubtotal  = (s: CartStore) => s.items.reduce((n, i) => n + i.product.price * i.quantity, 0);

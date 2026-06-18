@@ -4,23 +4,23 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/pressable-scale';
-import { getOrderById } from '@/services/orders';
-import { useOrderStore } from '@/store/orders';
-import type { OrderStatus, PlacedOrder, Order } from '@/types';
+import { fetchOrderById } from '@/services/orders';
+import { useAuthStore } from '@/store/auth';
+import type { OrderStatus } from '@/types';
+import type { ApiOrder } from '@/services/orders';
 
 type DisplayOrder = {
-  id: string;
-  date: string;
-  status: OrderStatus;
-  items: { name: string; image: string; qty: number; price?: number }[];
-  total: number;
-  vendor: string;
-  subtotal?: number;
-  deliveryFee?: number;
-  discount?: number;
-  paymentMethod?: string;
-  deliverySlot?: string;
-  address?: string;
+  id:             string;
+  date:           string;
+  status:         OrderStatus;
+  items:          { name: string; image: string; qty: number; price: number }[];
+  total:          number;
+  vendor:         string;
+  subtotal:       number;
+  deliveryFee:    number;
+  discount:       number;
+  paymentMethod:  string;
+  address:        string;
   expectedDelivery?: string;
 };
 
@@ -37,51 +37,63 @@ const STEPS = [
   { label: 'Delivered',    sub: 'Successfully delivered' },
 ];
 
-function toDisplay(order: PlacedOrder | Order): DisplayOrder {
-  if ('subtotal' in order) {
-    return {
-      id: order.id,
-      date: order.date,
-      status: order.status,
-      items: order.items.map((i) => ({ name: i.name, image: i.image, qty: i.qty, price: i.price })),
-      total: order.total,
-      vendor: order.vendor,
-      subtotal: order.subtotal,
-      deliveryFee: order.deliveryFee,
-      discount: order.discount,
-      paymentMethod: order.paymentMethod,
-      deliverySlot: order.deliverySlot,
-      address: order.address,
-      expectedDelivery: order.expectedDelivery,
-    };
-  }
+const PAYMENT_LABELS: Record<string, string> = {
+  upi: 'UPI', card: 'Credit / Debit Card',
+  cod: 'Cash on Delivery', wallet: 'Harvest Wallet',
+};
+
+function mapStatus(s: string): OrderStatus {
+  if (s === 'delivered')                        return 'delivered';
+  if (s === 'in_transit' || s === 'dispatched') return 'in-transit';
+  return 'processing';
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatDelivery(d: string): string {
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function apiToDisplay(api: ApiOrder): DisplayOrder {
+  const addr = api.deliveryAddress;
+  const addressStr = [addr.line1, addr.line2, addr.city, addr.pincode].filter(Boolean).join(', ');
+  const sellerNames = [...new Set(api.items.map((i) => i.sellerName))];
+
   return {
-    id: order.id,
-    date: order.date,
-    status: order.status,
-    items: order.items.map((i) => ({ name: i.name, image: i.image, qty: i.qty })),
-    total: order.total,
-    vendor: order.vendor,
-    expectedDelivery: order.expectedDelivery,
+    id:     api.id,
+    date:   formatDate(api.createdAt),
+    status: mapStatus(api.status),
+    items:  api.items.map((i) => ({
+      name:  i.productName,
+      image: '📦',
+      qty:   i.quantity,
+      price: Math.round(i.unitPrice / 100),
+    })),
+    total:         Math.round(api.total / 100),
+    vendor:        sellerNames.length === 1 ? sellerNames[0]! : 'Multiple Vendors',
+    subtotal:      Math.round(api.subtotal / 100),
+    deliveryFee:   Math.round(api.deliveryFee / 100),
+    discount:      Math.round(api.discount / 100),
+    paymentMethod: PAYMENT_LABELS[api.paymentMethod] ?? api.paymentMethod,
+    address:       addressStr,
+    expectedDelivery: api.estimatedDelivery ? formatDelivery(api.estimatedDelivery) : undefined,
   };
 }
 
 export default function OrderDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const fromStore = useOrderStore((s) => s.getById(id));
-  const [order, setOrder] = useState<DisplayOrder | null>(null);
-  const [loading, setLoading] = useState(!fromStore);
+  const { id }        = useLocalSearchParams<{ id: string }>();
+  const { token }     = useAuthStore();
+  const [order,   setOrder]   = useState<DisplayOrder | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (fromStore) {
-      setOrder(toDisplay(fromStore));
-      return;
-    }
-    getOrderById(id).then((o) => {
-      if (o) setOrder(toDisplay(o));
-      setLoading(false);
-    });
-  }, [id]);
+    if (!id || !token) { setLoading(false); return; }
+    fetchOrderById(id, token)
+      .then((api) => { if (api) setOrder(apiToDisplay(api)); })
+      .finally(() => setLoading(false));
+  }, [id, token]);
 
   if (loading) {
     return (
@@ -96,14 +108,14 @@ export default function OrderDetailScreen() {
       <View style={s.center}>
         <Text style={{ fontSize: 40 }}>📦</Text>
         <Text style={s.errorText}>Order not found.</Text>
-        <Pressable style={s.backBtnCenter} onPress={() => router.back()}>
+        <Pressable style={s.backBtnCenter} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/orders')}>
           <Text style={s.backBtnCenterText}>Go Back</Text>
         </Pressable>
       </View>
     );
   }
 
-  const cfg = STATUS_CFG[order.status];
+  const cfg         = STATUS_CFG[order.status];
   const currentStep = cfg.step;
 
   return (
@@ -111,7 +123,7 @@ export default function OrderDetailScreen() {
       {/* Top Bar */}
       <SafeAreaView edges={['top']} style={s.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/orders')}
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -154,16 +166,12 @@ export default function OrderDetailScreen() {
           <Text style={s.sectionTitle}>Order Timeline</Text>
           <View style={s.card}>
             {STEPS.map((step, i) => {
-              const done = currentStep > i;
+              const done   = currentStep > i;
               const active = currentStep === i;
               return (
                 <View key={i} style={s.stepRow}>
                   <View style={s.stepTrack}>
-                    <View style={[
-                      s.stepDot,
-                      done && s.stepDotDone,
-                      active && s.stepDotActive,
-                    ]}>
+                    <View style={[s.stepDot, done && s.stepDotDone, active && s.stepDotActive]}>
                       <Text style={[s.stepDotText, (done || active) && { color: '#fff' }]}>
                         {done ? '✓' : String(i + 1)}
                       </Text>
@@ -200,9 +208,7 @@ export default function OrderDetailScreen() {
                     <Text style={s.itemName} numberOfLines={2}>{item.name}</Text>
                     <Text style={s.itemQtyText}>Qty: {item.qty}</Text>
                   </View>
-                  {item.price != null && (
-                    <Text style={s.itemPrice}>₹{item.price * item.qty}</Text>
-                  )}
+                  <Text style={s.itemPrice}>₹{item.price * item.qty}</Text>
                 </View>
                 {i < order.items.length - 1 && <View style={s.divider} />}
               </View>
@@ -211,60 +217,52 @@ export default function OrderDetailScreen() {
         </View>
 
         {/* Delivery Address */}
-        {order.address && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Delivery Address</Text>
-            <View style={s.card}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={s.addrIcon}><Text style={{ fontSize: 18 }}>📍</Text></View>
-                <Text style={s.addrText}>{order.address}</Text>
-              </View>
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Delivery Address</Text>
+          <View style={s.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={s.addrIcon}><Text style={{ fontSize: 18 }}>📍</Text></View>
+              <Text style={s.addrText}>{order.address}</Text>
             </View>
           </View>
-        )}
+        </View>
 
-        {/* Price Breakdown (placed orders only) */}
-        {order.subtotal != null && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Price Breakdown</Text>
-            <View style={[s.card, { gap: 10 }]}>
+        {/* Price Breakdown */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Price Breakdown</Text>
+          <View style={[s.card, { gap: 10 }]}>
+            <View style={s.priceRow}>
+              <Text style={s.priceLabel}>Subtotal</Text>
+              <Text style={s.priceValue}>₹{order.subtotal}</Text>
+            </View>
+            <View style={s.priceRow}>
+              <Text style={s.priceLabel}>Delivery Fee</Text>
+              <Text style={s.priceValue}>₹{order.deliveryFee}</Text>
+            </View>
+            {order.discount > 0 && (
               <View style={s.priceRow}>
-                <Text style={s.priceLabel}>Subtotal</Text>
-                <Text style={s.priceValue}>₹{order.subtotal}</Text>
+                <Text style={s.priceLabel}>Discount</Text>
+                <Text style={[s.priceValue, { color: '#2d8a4e', fontWeight: '700' }]}>-₹{order.discount}</Text>
               </View>
-              <View style={s.priceRow}>
-                <Text style={s.priceLabel}>Delivery Fee</Text>
-                <Text style={s.priceValue}>₹{order.deliveryFee}</Text>
-              </View>
-              {order.discount! > 0 && (
-                <View style={s.priceRow}>
-                  <Text style={s.priceLabel}>Discount</Text>
-                  <Text style={[s.priceValue, { color: '#2d8a4e', fontWeight: '700' }]}>-₹{order.discount}</Text>
-                </View>
-              )}
-              {order.paymentMethod && (
-                <View style={s.priceRow}>
-                  <Text style={s.priceLabel}>Payment</Text>
-                  <Text style={[s.priceValue, { color: '#374151' }]}>{order.paymentMethod}</Text>
-                </View>
-              )}
-              <View style={s.divider} />
-              <View style={s.priceRow}>
-                <Text style={[s.priceLabel, { color: '#111827', fontWeight: '700', fontSize: 14 }]}>Total Paid</Text>
-                <Text style={[s.priceValue, { color: '#c75a28', fontWeight: '800', fontSize: 15 }]}>₹{order.total}</Text>
-              </View>
+            )}
+            <View style={s.priceRow}>
+              <Text style={s.priceLabel}>Payment</Text>
+              <Text style={[s.priceValue, { color: '#374151' }]}>{order.paymentMethod}</Text>
+            </View>
+            <View style={s.divider} />
+            <View style={s.priceRow}>
+              <Text style={[s.priceLabel, { color: '#111827', fontWeight: '700', fontSize: 14 }]}>Total Paid</Text>
+              <Text style={[s.priceValue, { color: '#c75a28', fontWeight: '800', fontSize: 15 }]}>₹{order.total}</Text>
             </View>
           </View>
-        )}
+        </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Bottom Action Bar */}
       <SafeAreaView edges={['bottom']} style={s.bottomBar}>
-        <Pressable
-          style={({ pressed }) => [s.supportBtn, pressed && { opacity: 0.75 }]}
-        >
+        <Pressable style={({ pressed }) => [s.supportBtn, pressed && { opacity: 0.75 }]}>
           <Text style={s.supportBtnText}>💬  Support</Text>
         </Pressable>
         <PressableScale style={s.reorderBtn} scale={0.96}>
@@ -296,8 +294,7 @@ const s = StyleSheet.create({
 
   statusBanner: {
     marginHorizontal: 16, marginTop: 16,
-    borderRadius: 16, padding: 16,
-    borderWidth: 1,
+    borderRadius: 16, padding: 16, borderWidth: 1,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   statusLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -335,24 +332,24 @@ const s = StyleSheet.create({
     backgroundColor: '#f3f4f6', borderWidth: 2, borderColor: '#e5e7eb',
     alignItems: 'center', justifyContent: 'center',
   },
-  stepDotDone: { backgroundColor: '#c75a28', borderColor: '#c75a28' },
+  stepDotDone:   { backgroundColor: '#c75a28', borderColor: '#c75a28' },
   stepDotActive: { backgroundColor: '#c75a28', borderColor: '#c75a28' },
-  stepDotText: { fontSize: 11, fontWeight: '800', color: '#9ca3af' },
-  stepLine: { width: 2, flex: 1, backgroundColor: '#e5e7eb', marginVertical: 3 },
-  stepLineDone: { backgroundColor: '#c75a28' },
-  stepContent: { flex: 1, paddingTop: 3 },
-  stepLabel: { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
-  stepSub: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+  stepDotText:   { fontSize: 11, fontWeight: '800', color: '#9ca3af' },
+  stepLine:      { width: 2, flex: 1, backgroundColor: '#e5e7eb', marginVertical: 3 },
+  stepLineDone:  { backgroundColor: '#c75a28' },
+  stepContent:   { flex: 1, paddingTop: 3 },
+  stepLabel:     { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+  stepSub:       { fontSize: 11, color: '#9ca3af', marginTop: 2 },
 
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   itemEmoji: {
     width: 50, height: 50, backgroundColor: '#fff7f5',
     borderRadius: 12, alignItems: 'center', justifyContent: 'center',
   },
-  itemName: { fontSize: 13, fontWeight: '700', color: '#111827' },
+  itemName:    { fontSize: 13, fontWeight: '700', color: '#111827' },
   itemQtyText: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
-  itemPrice: { fontSize: 14, fontWeight: '800', color: '#c75a28' },
-  divider: { height: 1, backgroundColor: '#f0f0f3' },
+  itemPrice:   { fontSize: 14, fontWeight: '800', color: '#c75a28' },
+  divider:     { height: 1, backgroundColor: '#f0f0f3' },
 
   addrIcon: { width: 40, height: 40, backgroundColor: '#fff7f5', borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   addrText: { fontSize: 13, color: '#374151', flex: 1, lineHeight: 18 },
@@ -363,8 +360,7 @@ const s = StyleSheet.create({
 
   bottomBar: {
     flexDirection: 'row', gap: 12,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16, paddingTop: 12,
+    backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e5e7eb',
     shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12,
     shadowOffset: { width: 0, height: -3 }, elevation: 10,
@@ -377,8 +373,7 @@ const s = StyleSheet.create({
   },
   supportBtnText: { fontSize: 14, color: '#374151', fontWeight: '700' },
   reorderBtn: {
-    flex: 1, height: 50, borderRadius: 14,
-    backgroundColor: '#c75a28',
+    flex: 1, height: 50, borderRadius: 14, backgroundColor: '#c75a28',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#c75a28', shadowOpacity: 0.3, shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 }, elevation: 4,

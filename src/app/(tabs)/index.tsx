@@ -61,7 +61,10 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <Pressable style={({ pressed }) => [s.locRow, pressed && { opacity: 0.75 }]}>
+          <Pressable
+            onPress={() => router.push('/location-picker')}
+            style={({ pressed }) => [s.locRow, pressed && { opacity: 0.75 }]}
+          >
             <Text style={s.locText}>
               📍 Delivering to{' '}
               <Text style={s.locCity}>{location}, {district.split(',')[0]} ▾</Text>

@@ -52,7 +52,7 @@ export default function ProductDetailScreen() {
     return (
       <View style={s.center}>
         <Text style={s.errorText}>Product not found.</Text>
-        <Pressable onPress={() => router.back()} style={s.backBtn}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={s.backBtn}>
           <Text style={s.backBtnText}>Go Back</Text>
         </Pressable>
       </View>
@@ -63,7 +63,7 @@ export default function ProductDetailScreen() {
     <View style={s.screen}>
       <SafeAreaView edges={['top']} style={s.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
           style={({ pressed }) => [s.iconBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
