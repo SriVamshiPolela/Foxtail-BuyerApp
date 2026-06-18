@@ -42,7 +42,7 @@ export default function VendorStoreScreen() {
         <View style={s.banner}>
           <SafeAreaView edges={['top']}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/explore')}
               style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >

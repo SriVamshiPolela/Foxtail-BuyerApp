@@ -4,6 +4,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { PressableScale } from '@/components/pressable-scale';
 import { useUserStore } from '@/store/user';
+import { useAuthStore } from '@/store/auth';
+import { deleteAddressOnServer } from '@/services/user';
 import type { Address } from '@/store/user';
 
 const LABEL_ICON: Record<Address['label'], string> = {
@@ -16,6 +18,7 @@ export default function AddressBookScreen() {
   const params = useLocalSearchParams<{ select?: string }>();
   const isSelectMode = params.select === '1';
 
+  const userId = useAuthStore((s) => s.userId);
   const addresses = useUserStore((s) => s.addresses);
   const selectedAddressId = useUserStore((s) => s.selectedAddressId);
   const setSelectedAddress = useUserStore((s) => s.setSelectedAddress);
@@ -45,7 +48,14 @@ export default function AddressBookScreen() {
       `Remove "${addr.label}" at ${addr.line1}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteAddress(addr.id) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteAddress(addr.id);
+            if (userId) deleteAddressOnServer(userId, addr.id).catch(() => {});
+          },
+        },
       ],
     );
   };

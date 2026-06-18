@@ -1,22 +1,12 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
 import { PressableScale } from '@/components/pressable-scale';
-import { getOrders } from '@/services/orders';
-import { useOrderStore } from '@/store/orders';
+import { fetchOrders } from '@/services/orders';
+import { useAuthStore } from '@/store/auth';
 import type { OrderStatus, Order } from '@/types';
-
-type AnyOrder = {
-  id: string;
-  date: string;
-  status: OrderStatus;
-  items: { name: string; image: string; qty?: number }[];
-  total: number;
-  vendor: string;
-  expectedDelivery?: string;
-};
 
 const STATUS_CFG: Record<OrderStatus, { label: string; bg: string; text: string; border: string; icon: string }> = {
   delivered:    { label: 'Delivered',  bg: '#dcfce7', text: '#166534', border: '#86efac', icon: '✓'  },
@@ -26,40 +16,27 @@ const STATUS_CFG: Record<OrderStatus, { label: string; bg: string; text: string;
 
 const FILTER_TABS = ['All', 'Active', 'Delivered'];
 
-function toAny(o: Order): AnyOrder {
-  return { ...o, items: o.items.map((i) => ({ name: i.name, image: i.image, qty: i.qty })) };
-}
-
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState('All');
-  const [mockOrders, setMockOrders] = useState<AnyOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders,    setOrders]    = useState<Order[]>([]);
+  const [loading,   setLoading]   = useState(true);
 
-  const placedOrders = useOrderStore((s) => s.orders);
+  const { userId, token } = useAuthStore();
 
   useEffect(() => {
-    getOrders().then((os) => {
-      setMockOrders(os.map(toAny));
+    if (!userId || !token) {
       setLoading(false);
-    });
-  }, []);
+      return;
+    }
+    setLoading(true);
+    fetchOrders(userId, token)
+      .then(setOrders)
+      .finally(() => setLoading(false));
+  }, [userId, token]);
 
-  const allOrders: AnyOrder[] = [
-    ...placedOrders.map((o) => ({
-      id: o.id,
-      date: o.date,
-      status: o.status,
-      items: o.items.map((i) => ({ name: i.name, image: i.image, qty: i.qty })),
-      total: o.total,
-      vendor: o.vendor,
-      expectedDelivery: o.expectedDelivery,
-    })),
-    ...mockOrders,
-  ];
-
-  const filtered = allOrders.filter((o) => {
-    if (activeTab === 'All') return true;
-    if (activeTab === 'Active') return o.status !== 'delivered';
+  const filtered = orders.filter((o) => {
+    if (activeTab === 'All')       return true;
+    if (activeTab === 'Active')    return o.status !== 'delivered';
     return o.status === 'delivered';
   });
 
@@ -98,7 +75,11 @@ export default function OrdersScreen() {
           <View style={s.emptyWrap}>
             <Text style={{ fontSize: 48 }}>📦</Text>
             <Text style={s.emptyTitle}>No orders here yet</Text>
-            <Text style={s.emptySub}>Your {activeTab.toLowerCase()} orders will appear here.</Text>
+            <Text style={s.emptySub}>
+              {activeTab === 'All'
+                ? "You haven't placed any orders yet. Start exploring!"
+                : `Your ${activeTab.toLowerCase()} orders will appear here.`}
+            </Text>
           </View>
         ) : (
           <View style={[s.section, { gap: 14 }]}>
@@ -114,7 +95,7 @@ export default function OrdersScreen() {
                   {/* Order Header */}
                   <View style={s.cardHead}>
                     <View>
-                      <Text style={s.orderId}>#{order.id}</Text>
+                      <Text style={s.orderId}>#{order.id.slice(0, 13).toUpperCase()}</Text>
                       <Text style={s.orderDate}>{order.date}</Text>
                     </View>
                     <View style={[s.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>

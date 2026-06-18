@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import {
   ScrollView, View, Text, TextInput, Pressable,
-  StyleSheet, KeyboardAvoidingView, Platform,
+  StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { PressableScale } from '@/components/pressable-scale';
 import { useUserStore } from '@/store/user';
+import { useAuthStore } from '@/store/auth';
+import { createAddressOnServer, updateAddressOnServer } from '@/services/user';
 import type { Address } from '@/store/user';
 
 const LABELS: Address['label'][] = ['Home', 'Work', 'Other'];
@@ -52,6 +54,8 @@ export default function AddressFormScreen() {
   const addAddress = useUserStore((s) => s.addAddress);
   const updateAddress = useUserStore((s) => s.updateAddress);
 
+  const userId = useAuthStore((s) => s.userId);
+
   const editAddr = id ? addresses.find((a) => a.id === id) : undefined;
   const isEdit = !!editAddr;
 
@@ -60,6 +64,8 @@ export default function AddressFormScreen() {
     else router.replace('/');
   };
 
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(() =>
     editAddr
       ? {
@@ -94,14 +100,40 @@ export default function AddressFormScreen() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    if (isEdit && id) {
-      updateAddress(id, form);
-    } else {
-      addAddress(form);
+    setSaving(true);
+    setSaveErr(null);
+    const payload = {
+      label:     form.label,
+      line1:     form.line1,
+      line2:     form.line2 || undefined,
+      city:      form.city,
+      district:  form.district,
+      state:     form.state,
+      pincode:   form.pincode,
+      isDefault: form.isDefault,
+    };
+    try {
+      if (isEdit && id) {
+        await updateAddressOnServer(userId!, id, payload);
+        updateAddress(id, form);
+      } else {
+        const server = await createAddressOnServer(userId!, payload);
+        addAddress(form, server.id);
+      }
+      goBack();
+    } catch {
+      // backend unreachable — save locally so data isn't lost
+      if (isEdit && id) {
+        updateAddress(id, form);
+      } else {
+        addAddress(form);
+      }
+      goBack();
+    } finally {
+      setSaving(false);
     }
-    goBack();
   };
 
   return (
@@ -202,10 +234,11 @@ export default function AddressFormScreen() {
 
         {/* Sticky save */}
         <SafeAreaView edges={['bottom']} style={s.bottomBar}>
-          <PressableScale style={s.saveBtn} scale={0.97} onPress={handleSave}>
-            <Text style={s.saveBtnTxt}>
-              {isEdit ? 'Save Changes' : 'Save Address'}
-            </Text>
+          <PressableScale style={[s.saveBtn, saving && { opacity: 0.7 }]} scale={0.97} onPress={handleSave} disabled={saving}>
+            {saving
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={s.saveBtnTxt}>{isEdit ? 'Save Changes' : 'Save Address'}</Text>
+            }
           </PressableScale>
         </SafeAreaView>
       </View>

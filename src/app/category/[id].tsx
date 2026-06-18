@@ -56,7 +56,7 @@ export default function CategoryScreen() {
       {/* Header */}
       <SafeAreaView edges={['top']} style={s.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/explore')}
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
         >
