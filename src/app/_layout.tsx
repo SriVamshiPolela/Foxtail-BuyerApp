@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Stack, DarkTheme, DefaultTheme, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import { useColorScheme, View, ActivityIndicator } from 'react-native';
+import { ThemePreferenceProvider, useThemePreference } from '@/context/theme-context';
+import { LanguageProvider } from '@/context/language-context';
 import * as Location from 'expo-location';
 
 // AnimatedSplashOverlay disabled on dev build — re-enable for production
@@ -35,6 +37,16 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
+  return (
+    <ThemePreferenceProvider>
+      <LanguageProvider>
+        <RootLayoutInner />
+      </LanguageProvider>
+    </ThemePreferenceProvider>
+  );
+}
+
+function RootLayoutInner() {
   const colorScheme  = useColorScheme();
   const hydrate      = useAuthStore((s) => s.hydrate);
   const isLoading    = useAuthStore((s) => s.isLoading);
@@ -94,8 +106,10 @@ export default function RootLayout() {
     );
   }
 
+  const { scheme } = useThemePreference();
+
   return (
-    <ThemeProvider value={DefaultTheme}>
+    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthGuard />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
