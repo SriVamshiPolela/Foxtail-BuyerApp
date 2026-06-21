@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 
 import { PressableScale } from '@/components/pressable-scale';
 import { AppSettingsModal } from '@/components/app-settings-modal';
+import { HelpSupportModal } from '@/components/help-support-modal';
 import { useUserStore } from '@/store/user';
 import { useCartStore, cartItemCount } from '@/store/cart';
 import { useWishlistStore } from '@/store/wishlist';
@@ -44,6 +45,7 @@ export default function ProfileScreen() {
   );
 
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [helpVisible,     setHelpVisible]     = useState(false);
   const [locLoading,   setLocLoading]   = useState(false);
   const [locError,     setLocError]     = useState<string | null>(null);
   const [manualMode,   setManualMode]   = useState(false);
@@ -105,6 +107,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={s.screen} showsVerticalScrollIndicator={false}>
       <AppSettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
+      <HelpSupportModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
       {/* Header */}
       <View style={s.header}>
         <SafeAreaView edges={['top']}>
@@ -229,7 +232,7 @@ export default function ProfileScreen() {
         {menuItems.map((item, i) => {
           const badge = getBadge(item.badgeKey);
           return (
-            <PressableScale key={i} style={[s.menuItem, item.highlight && s.menuItemHL]} scale={0.985} onPress={item.label === 'Settings' ? () => setSettingsVisible(true) : item.route ? () => router.push(item.route!) : undefined}>
+            <PressableScale key={i} style={[s.menuItem, item.highlight && s.menuItemHL]} scale={0.985} onPress={item.label === 'Settings' ? () => setSettingsVisible(true) : item.label === 'Help & Support' ? () => setHelpVisible(true) : item.route ? () => router.push(item.route!) : undefined}>
               <View style={[s.menuIcon, item.highlight && s.menuIconHL]}>
                 <Text style={{ fontSize: 18 }}>{item.icon}</Text>
               </View>
