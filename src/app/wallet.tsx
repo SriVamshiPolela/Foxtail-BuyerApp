@@ -10,6 +10,7 @@ import { useUserStore } from '@/store/user';
 import { useAuthStore } from '@/store/auth';
 import { usePaymentStore } from '@/store/payment';
 import { fetchWallet, topupWallet } from '@/services/user';
+import { useLanguage } from '@/context/language-context';
 import type { WalletTransaction } from '@/services/user';
 
 const BRAND   = '#c75a28';
@@ -45,6 +46,7 @@ function TxnRow({ txn }: { txn: WalletTransaction }) {
 }
 
 export default function WalletScreen() {
+  const { t } = useLanguage();
   const userId         = useAuthStore((s) => s.userId);
   const walletBalance  = useUserStore((s) => s.walletBalance);
   const setWalletBal   = useUserStore((s) => s.setWalletBalance);
@@ -81,9 +83,9 @@ export default function WalletScreen() {
 
   async function handleAddMoney() {
     if (!userId) return;
-    if (effectiveAmount < 1) { setAddErr('Minimum add amount is ₹1'); return; }
-    if (effectiveAmount > 10000) { setAddErr('Maximum is ₹10,000 per transaction'); return; }
-    if (!selectedPM) { setAddErr('Choose a payment method'); return; }
+    if (effectiveAmount < 1) { setAddErr(t('wallet_min_error')); return; }
+    if (effectiveAmount > 10000) { setAddErr(t('wallet_max_error')); return; }
+    if (!selectedPM) { setAddErr(t('wallet_pm_error')); return; }
 
     setAdding(true); setAddErr('');
     try {
@@ -116,7 +118,7 @@ export default function WalletScreen() {
           >
             <Text style={s.backTxt}>← Back</Text>
           </Pressable>
-          <Text style={s.headerTitle}>Harvest Wallet</Text>
+          <Text style={s.headerTitle}>{t('wallet_title')}</Text>
           <View style={{ width: 64 }} />
         </SafeAreaView>
 
@@ -130,20 +132,20 @@ export default function WalletScreen() {
             <View style={s.walletIconWrap}>
               <Text style={{ fontSize: 32 }}>👛</Text>
             </View>
-            <Text style={s.balanceLabel}>Available Balance</Text>
+            <Text style={s.balanceLabel}>{t('wallet_balance_label')}</Text>
             {loading ? (
               <ActivityIndicator color="#fff" style={{ marginTop: 8 }} />
             ) : (
               <Text style={s.balanceAmt}>{fmt(walletBalance)}</Text>
             )}
-            <Text style={s.balanceSub}>Use at checkout for instant payment</Text>
+            <Text style={s.balanceSub}>{t('wallet_balance_sub')}</Text>
 
             {!showForm && (
               <Pressable
                 style={({ pressed }) => [s.addMoneyBtn, pressed && { opacity: 0.85 }]}
                 onPress={() => setShowForm(true)}
               >
-                <Text style={s.addMoneyTxt}>+ Add Money</Text>
+                <Text style={s.addMoneyTxt}>{t('wallet_add_money')}</Text>
               </Pressable>
             )}
           </View>
@@ -151,10 +153,10 @@ export default function WalletScreen() {
           {/* Add money form */}
           {showForm && (
             <View style={s.formCard}>
-              <Text style={s.formTitle}>Add Money to Wallet</Text>
+              <Text style={s.formTitle}>{t('wallet_form_title')}</Text>
 
               {/* Quick amounts */}
-              <Text style={s.fieldLabel}>Select Amount</Text>
+              <Text style={s.fieldLabel}>{t('wallet_select_amount')}</Text>
               <View style={s.quickRow}>
                 {QUICK_AMOUNTS.map((amt) => (
                   <Pressable
@@ -173,7 +175,7 @@ export default function WalletScreen() {
                 ))}
               </View>
 
-              <Text style={s.orDivider}>— or enter custom amount —</Text>
+              <Text style={s.orDivider}>{t('wallet_custom_or')}</Text>
 
               <View style={s.customAmtRow}>
                 <Text style={s.rupeeSign}>₹</Text>
@@ -189,11 +191,11 @@ export default function WalletScreen() {
               </View>
 
               {/* Payment method */}
-              <Text style={[s.fieldLabel, { marginTop: 16 }]}>Pay via</Text>
+              <Text style={[s.fieldLabel, { marginTop: 16 }]}>{t('wallet_pay_via')}</Text>
 
               {upiIds.length === 0 && cards.length === 0 ? (
                 <Pressable onPress={() => router.push('/payments')} style={s.addPMPrompt}>
-                  <Text style={s.addPMPromptTxt}>No payment methods saved — tap to add UPI or card</Text>
+                  <Text style={s.addPMPromptTxt}>{t('wallet_no_pm')}</Text>
                 </Pressable>
               ) : (
                 <View style={s.pmList}>
@@ -244,10 +246,10 @@ export default function WalletScreen() {
               {effectiveAmount >= 1 && selectedPM && (
                 <View style={s.previewBox}>
                   <Text style={s.previewTxt}>
-                    Adding <Text style={{ fontWeight: '800' }}>{fmt(effectiveAmount)}</Text> to wallet
+                    {t('wallet_preview_adding')} <Text style={{ fontWeight: '800' }}>{fmt(effectiveAmount)}</Text> {t('wallet_preview_to')}
                   </Text>
                   <Text style={s.previewSub}>
-                    New balance will be {fmt(walletBalance + effectiveAmount)}
+                    {t('wallet_preview_new_bal')} {fmt(walletBalance + effectiveAmount)}
                   </Text>
                 </View>
               )}
@@ -257,7 +259,7 @@ export default function WalletScreen() {
                   style={({ pressed }) => [s.cancelBtn, pressed && { opacity: 0.7 }]}
                   onPress={resetForm}
                 >
-                  <Text style={s.cancelTxt}>Cancel</Text>
+                  <Text style={s.cancelTxt}>{t('wallet_cancel')}</Text>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [s.confirmBtn, (pressed || adding) && { opacity: 0.8 }]}
@@ -266,7 +268,7 @@ export default function WalletScreen() {
                 >
                   {adding
                     ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={s.confirmTxt}>Add {effectiveAmount >= 1 ? fmt(effectiveAmount) : 'Money'}</Text>
+                    : <Text style={s.confirmTxt}>{t('wallet_confirm_add')} {effectiveAmount >= 1 ? fmt(effectiveAmount) : ''}</Text>
                   }
                 </Pressable>
               </View>
@@ -275,7 +277,7 @@ export default function WalletScreen() {
 
           {/* Transaction history */}
           <View>
-            <Text style={s.sectionLabel}>Transaction History</Text>
+            <Text style={s.sectionLabel}>{t('wallet_transactions')}</Text>
             <View style={s.txnCard}>
               {loading ? (
                 <View style={s.centerPad}>
@@ -284,8 +286,8 @@ export default function WalletScreen() {
               ) : transactions.length === 0 ? (
                 <View style={s.centerPad}>
                   <Text style={{ fontSize: 28, textAlign: 'center' }}>🧾</Text>
-                  <Text style={s.emptyTxt}>No transactions yet</Text>
-                  <Text style={s.emptySub}>Add money to get started</Text>
+                  <Text style={s.emptyTxt}>{t('wallet_empty')}</Text>
+                  <Text style={s.emptySub}>{t('wallet_empty_sub')}</Text>
                 </View>
               ) : (
                 transactions.map((txn, i) => (
@@ -301,9 +303,7 @@ export default function WalletScreen() {
           {/* Info note */}
           <View style={s.infoNote}>
             <Text style={s.infoIcon}>ℹ️</Text>
-            <Text style={s.infoTxt}>
-              Wallet balance can be used at checkout. Maximum wallet balance is ₹10,000. Unused balance never expires.
-            </Text>
+            <Text style={s.infoTxt}>{t('wallet_info')}</Text>
           </View>
 
           <View style={{ height: 40 }} />

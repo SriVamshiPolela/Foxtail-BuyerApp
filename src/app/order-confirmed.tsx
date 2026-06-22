@@ -6,6 +6,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { PressableScale } from '@/components/pressable-scale';
 import { fetchOrderById } from '@/services/orders';
 import { useAuthStore } from '@/store/auth';
+import { useLanguage } from '@/context/language-context';
 import type { ApiOrder } from '@/services/orders';
 
 function mapPaymentLabel(method: string): string {
@@ -19,6 +20,7 @@ function mapPaymentLabel(method: string): string {
 }
 
 export default function OrderConfirmedScreen() {
+  const { t } = useLanguage();
   const { orderId, slot, payment } = useLocalSearchParams<{
     orderId: string; slot: string; payment: string;
   }>();
@@ -38,7 +40,7 @@ export default function OrderConfirmedScreen() {
     return (
       <View style={s.center}>
         <ActivityIndicator size="large" color="#c75a28" />
-        <Text style={{ color: '#9ca3af', marginTop: 12, fontSize: 13 }}>Loading order details…</Text>
+        <Text style={{ color: '#9ca3af', marginTop: 12, fontSize: 13 }}>{t('order_confirmed_sub')}</Text>
       </View>
     );
   }
@@ -77,11 +79,9 @@ export default function OrderConfirmedScreen() {
             <View style={s.checkCircle}>
               <Text style={s.checkMark}>✓</Text>
             </View>
-            <Text style={s.successTitle}>Order Placed!</Text>
+            <Text style={s.successTitle}>{t('order_confirmed_title')}</Text>
             <Text style={s.orderId}>#{order.id}</Text>
-            <Text style={s.successSub}>
-              We've received your order and it's being processed.
-            </Text>
+            <Text style={s.successSub}>{t('order_confirmed_sub')}</Text>
           </SafeAreaView>
         </View>
 
@@ -91,7 +91,7 @@ export default function OrderConfirmedScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={s.infoIcon}><Text style={{ fontSize: 22 }}>🚚</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.infoLabel}>Estimated Delivery</Text>
+                <Text style={s.infoLabel}>{t('order_confirmed_slot')}</Text>
                 <Text style={s.infoValue}>{deliveryLabel}</Text>
               </View>
             </View>
@@ -104,7 +104,7 @@ export default function OrderConfirmedScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={s.infoIcon}><Text style={{ fontSize: 22 }}>💳</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.infoLabel}>Payment Method</Text>
+                <Text style={s.infoLabel}>{t('order_confirmed_payment')}</Text>
                 <Text style={s.infoValue}>{paymentDisplay}</Text>
               </View>
               <View style={s.confirmedBadge}>
@@ -116,7 +116,7 @@ export default function OrderConfirmedScreen() {
 
         {/* Items Summary */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Order Summary  ·  {itemCount} items</Text>
+          <Text style={s.sectionTitle}>{t('order_confirmed_id')}  ·  {itemCount} items</Text>
           <View style={s.card}>
             {order.items.map((item, i) => (
               <View key={item.productId}>
@@ -135,7 +135,7 @@ export default function OrderConfirmedScreen() {
             ))}
             <View style={[s.divider, { marginTop: 4 }]} />
             <View style={s.totalRow}>
-              <Text style={s.totalLabel}>Total Paid</Text>
+              <Text style={s.totalLabel}>{t('order_confirmed_payment')}</Text>
               <Text style={s.totalValue}>₹{totalRs}</Text>
             </View>
           </View>
@@ -143,7 +143,7 @@ export default function OrderConfirmedScreen() {
 
         {/* Delivery Address */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Delivering To</Text>
+          <Text style={s.sectionTitle}>{t('checkout_deliver_to')}</Text>
           <View style={s.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={s.infoIcon}><Text style={{ fontSize: 18 }}>📍</Text></View>
@@ -155,10 +155,10 @@ export default function OrderConfirmedScreen() {
         {/* CTAs */}
         <View style={[s.section, { paddingBottom: 48 }]}>
           <PressableScale style={s.primaryBtn} scale={0.97} onPress={() => router.replace('/orders')}>
-            <Text style={s.primaryBtnText}>Track My Order →</Text>
+            <Text style={s.primaryBtnText}>{t('order_confirmed_track')}</Text>
           </PressableScale>
           <PressableScale style={s.outlineBtn} scale={0.97} onPress={() => router.replace('/')}>
-            <Text style={s.outlineBtnText}>Continue Shopping</Text>
+            <Text style={s.outlineBtnText}>{t('order_confirmed_continue')}</Text>
           </PressableScale>
         </View>
       </ScrollView>

@@ -8,12 +8,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
 import { applyReferralCode } from '@/services/user';
+import { useLanguage } from '@/context/language-context';
 
 const BRAND     = '#c75a28';
 const WARM_BG   = '#fffaf7';
 const OTP_LEN   = 6;
 
 export default function OtpScreen() {
+  const { t } = useLanguage();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const { mode, referralCode } = useLocalSearchParams<{ mode: 'register' | 'login'; referralCode?: string }>();
@@ -95,7 +97,7 @@ export default function OtpScreen() {
       {/* Back */}
       <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/auth/login')} style={s.backBtn} activeOpacity={0.7}>
         <Text style={s.backArrow}>←</Text>
-        <Text style={s.backTxt}>Back</Text>
+        <Text style={s.backTxt}>{t('otp_back')}</Text>
       </TouchableOpacity>
 
       <View style={s.body}>
@@ -106,16 +108,16 @@ export default function OtpScreen() {
           </View>
         </View>
 
-        <Text style={s.heading}>Verify your number</Text>
+        <Text style={s.heading}>{t('otp_heading')}</Text>
         <Text style={s.sub}>
-          We sent a 6-digit code to{'\n'}
+          {t('otp_sub')}{'\n'}
           <Text style={s.maskedPhone}>{maskedPhone}</Text>
         </Text>
 
         {/* Mode badge */}
         <View style={s.modeBadge}>
           <Text style={s.modeBadgeTxt}>
-            {mode === 'register' ? '🆕  Registration OTP' : '🔐  Login OTP'}
+            {mode === 'register' ? `🆕  ${t('otp_badge_register')}` : `🔐  ${t('otp_badge_login')}`}
           </Text>
         </View>
 
@@ -140,7 +142,7 @@ export default function OtpScreen() {
         {busy && (
           <View style={s.verifyRow}>
             <ActivityIndicator color={BRAND} size="small" />
-            <Text style={s.verifyTxt}>Verifying…</Text>
+            <Text style={s.verifyTxt}>{t('otp_verifying')}</Text>
           </View>
         )}
 
@@ -153,19 +155,17 @@ export default function OtpScreen() {
         >
           {countdown > 0 ? (
             <Text style={s.resendDisabled}>
-              Resend OTP in <Text style={{ color: BRAND, fontWeight: '700' }}>{countdown}s</Text>
+              {t('otp_resend_in')} <Text style={{ color: BRAND, fontWeight: '700' }}>{countdown}s</Text>
             </Text>
           ) : (
-            <Text style={s.resendActive}>Resend OTP</Text>
+            <Text style={s.resendActive}>{t('otp_resend')}</Text>
           )}
         </TouchableOpacity>
 
         {/* Tip */}
         <View style={s.tipBox}>
           <Text style={s.tipTxt}>
-            {mode === 'register'
-              ? '💡  If you added an email, check your inbox too — we sent the code there as well'
-              : '💡  Didn\'t get it? Check SMS and wait a moment before resending'}
+            {mode === 'register' ? `💡  ${t('otp_tip_register')}` : `💡  ${t('otp_tip_login')}`}
           </Text>
         </View>
       </View>

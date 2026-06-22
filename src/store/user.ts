@@ -39,6 +39,7 @@ type UserStore = {
   email: string;
   location: string;
   district: string;
+  locationPincode: string;
   walletBalance: number;
   memberSince: string;
   orderCount: number;
@@ -48,7 +49,7 @@ type UserStore = {
 
   setProfile: (profile: UserProfile) => void;
   clearProfile: () => void;
-  setLocation: (location: string, district: string) => void;
+  setLocation: (location: string, district: string, pincode?: string) => void;
   setOrderCount: (count: number) => void;
   setWalletBalance: (paise: number) => void;
   addToWallet: (amount: number) => void;
@@ -66,8 +67,9 @@ export const useUserStore = create<UserStore>()(
   initials:      '',
   phone:         '',
   email:         '',
-  location:      'Kukatpally',
-  district:      'Medchal District, Telangana',
+  location:        'Kukatpally',
+  district:        'Medchal District, Telangana',
+  locationPincode: '500072',
   walletBalance: 0,
   memberSince:   '',
   orderCount:    0,
@@ -105,7 +107,8 @@ export const useUserStore = create<UserStore>()(
       selectedAddressId: '',
     }),
 
-  setLocation: (location, district) => set({ location, district }),
+  setLocation: (location, district, pincode) =>
+    set({ location, district, ...(pincode !== undefined && { locationPincode: pincode }) }),
   setOrderCount: (count) => set({ orderCount: count }),
   setWalletBalance: (rupees) => set({ walletBalance: rupees }),
   addToWallet: (amount) => set((s) => ({ walletBalance: s.walletBalance + amount })),
@@ -176,6 +179,7 @@ export const useUserStore = create<UserStore>()(
       partialize: (state) => ({
         location:          state.location,
         district:          state.district,
+        locationPincode:   state.locationPincode,
         addresses:         state.addresses,
         selectedAddressId: state.selectedAddressId,
       }),

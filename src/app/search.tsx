@@ -9,11 +9,13 @@ import { PressableScale } from '@/components/pressable-scale';
 import { TrustBadge, ShippabilityBadge } from '@/components/buyer-ui';
 import { CartButton } from '@/components/cart-button';
 import { searchProducts } from '@/services/search';
+import { useLanguage } from '@/context/language-context';
 import type { Product } from '@/types';
 
 const MAX_RECENT = 6;
 
 export default function SearchScreen() {
+  const { t } = useLanguage();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
@@ -73,7 +75,7 @@ export default function SearchScreen() {
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={commitSearch}
-            placeholder="Search vegetables, handlooms..."
+            placeholder={t('search_placeholder')}
             placeholderTextColor="#9ca3af"
             returnKeyType="search"
             autoCorrect={false}
@@ -100,9 +102,9 @@ export default function SearchScreen() {
             {showRecent && (
               <View style={s.recentWrap}>
                 <View style={s.recentHead}>
-                  <Text style={s.recentTitle}>Recent Searches</Text>
+                  <Text style={s.recentTitle}>{t('search_recent')}</Text>
                   <Pressable onPress={() => setRecent([])}>
-                    <Text style={s.clearAll}>Clear All</Text>
+                    <Text style={s.clearAll}>{t('search_clear')}</Text>
                   </Pressable>
                 </View>
                 {recent.map((term) => (
@@ -133,14 +135,14 @@ export default function SearchScreen() {
             {showEmpty && (
               <View style={s.emptyWrap}>
                 <Text style={{ fontSize: 52 }}>🔍</Text>
-                <Text style={s.emptyTitle}>No results for "{query}"</Text>
-                <Text style={s.emptySub}>Try a product name, vendor, or category</Text>
+                <Text style={s.emptyTitle}>{t('search_no_results')} "{query}"</Text>
+                <Text style={s.emptySub}>{t('search_no_results_sub')}</Text>
               </View>
             )}
 
             {showResults && (
               <Text style={s.countLabel}>
-                {results.length} result{results.length !== 1 ? 's' : ''} for "{query.trim()}"
+                {results.length} {t('search_result_count')} "{query.trim()}"
               </Text>
             )}
           </>

@@ -13,20 +13,23 @@ import { useAuthStore } from '@/store/auth';
 import { authService } from '@/services/auth';
 import { detectLocation } from '@/services/location';
 import { fetchOrders } from '@/services/orders';
-
-const menuItems = [
-  { icon: '📦', label: 'My Orders',        desc: 'Track your purchases',       badgeKey: 'orders' as const,   route: '/(tabs)/orders' as const },
-  { icon: '🤍', label: 'Wishlist',          desc: 'Your saved items',           badgeKey: 'wishlist' as const, route: '/favorites' as const },
-  { icon: '📍', label: 'Saved Addresses',   desc: 'Manage delivery locations',  route: '/address-book' as const },
-  { icon: '💳', label: 'Payment Methods',   desc: 'Cards & UPI',               route: '/payments' as const },
-  { icon: '👛', label: 'Harvest Wallet',    desc: 'Your balance',               badgeKey: 'wallet' as const, highlight: true, route: '/wallet' as const },
-  { icon: '🎁', label: 'Refer & Earn',      desc: 'Get ₹100 per referral',        route: '/referral' as const },
-  { icon: '🏪', label: 'Become a Seller',   desc: 'Start your local business' },
-  { icon: '⚙️', label: 'Settings',          desc: 'App preferences' },
-  { icon: '❓', label: 'Help & Support',    desc: 'FAQs and contact' },
-];
+import { useLanguage } from '@/context/language-context';
 
 export default function ProfileScreen() {
+  const { t } = useLanguage();
+
+  const menuItems = [
+    { icon: '📦', label: t('menu_my_orders'),       desc: t('menu_my_orders_desc'),       badgeKey: 'orders' as const,   route: '/(tabs)/orders' as const, action: 'orders' },
+    { icon: '🤍', label: t('menu_wishlist'),         desc: t('menu_wishlist_desc'),         badgeKey: 'wishlist' as const, route: '/favorites' as const,     action: 'favorites' },
+    { icon: '📍', label: t('menu_saved_addresses'),  desc: t('menu_saved_addresses_desc'),  route: '/address-book' as const,                                  action: 'addresses' },
+    { icon: '💳', label: t('menu_payment_methods'),  desc: t('menu_payment_methods_desc'),  route: '/payments' as const,                                       action: 'payments' },
+    { icon: '👛', label: t('menu_wallet'),           desc: t('menu_wallet_desc'),           badgeKey: 'wallet' as const, highlight: true, route: '/wallet' as const, action: 'wallet' },
+    { icon: '🎁', label: t('menu_refer_earn'),       desc: t('menu_refer_earn_desc'),       route: '/referral' as const,                                       action: 'referral' },
+    { icon: '🏪', label: t('menu_become_seller'),    desc: t('menu_become_seller_desc'),                                                                       action: 'seller' },
+    { icon: '⚙️', label: t('menu_settings'),         desc: t('menu_settings_desc'),                                                                            action: 'settings' },
+    { icon: '❓', label: t('menu_help'),             desc: t('menu_help_desc'),                                                                                action: 'help' },
+  ];
+
   const user          = useUserStore();
   const cartCount     = useCartStore(cartItemCount);
   const wishlistCount = useWishlistStore((s) => s.favoriteIds.length);
@@ -77,8 +80,8 @@ export default function ProfileScreen() {
   }
 
   const getBadge = (key?: string) => {
-    if (key === 'orders')   return `${user.orderCount} total`;
-    if (key === 'wishlist') return `${wishlistCount} items`;
+    if (key === 'orders')   return `${user.orderCount} ${t('profile_total')}`;
+    if (key === 'wishlist') return `${wishlistCount} ${t('profile_items')}`;
     if (key === 'wallet')   return `₹${user.walletBalance.toLocaleString('en-IN')}`;
     return undefined;
   };
@@ -126,11 +129,11 @@ export default function ProfileScreen() {
                   <Text style={s.name}>{user.name}</Text>
                   <Text style={s.phone}>{user.phone}</Text>
                   {user.memberSince ? (
-                    <Text style={s.since}>Member since {user.memberSince}</Text>
+                    <Text style={s.since}>{t('profile_member_since')} {user.memberSince}</Text>
                   ) : null}
                 </>
               ) : (
-                <Text style={s.phone}>Loading profile…</Text>
+                <Text style={s.phone}>{t('profile_loading')}</Text>
               )}
             </View>
             <Pressable
@@ -145,22 +148,22 @@ export default function ProfileScreen() {
           <View style={s.statsRow}>
             <View style={s.stat}>
               <Text style={s.statVal}>{user.orderCount}</Text>
-              <Text style={s.statLbl}>Orders</Text>
+              <Text style={s.statLbl}>{t('profile_orders')}</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
               <Text style={s.statVal}>{wishlistCount}</Text>
-              <Text style={s.statLbl}>Wishlist</Text>
+              <Text style={s.statLbl}>{t('profile_wishlist')}</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
               <Text style={s.statVal}>₹{user.walletBalance.toLocaleString('en-IN')}</Text>
-              <Text style={s.statLbl}>Wallet</Text>
+              <Text style={s.statLbl}>{t('profile_wallet')}</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
               <Text style={s.statVal}>{cartCount}</Text>
-              <Text style={s.statLbl}>In Cart</Text>
+              <Text style={s.statLbl}>{t('profile_in_cart')}</Text>
             </View>
           </View>
         </SafeAreaView>
@@ -177,7 +180,7 @@ export default function ProfileScreen() {
               }
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.locTitle}>Your Location</Text>
+              <Text style={s.locTitle}>{t('profile_location_title')}</Text>
               <Text style={s.locSub} numberOfLines={1}>{user.location}, {user.district}</Text>
             </View>
             <Pressable
@@ -186,7 +189,7 @@ export default function ProfileScreen() {
               style={({ pressed }) => [s.detectBtn, pressed && { opacity: 0.7 }]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={s.detectBtnTxt}>{locLoading ? '…' : '⟳ Detect'}</Text>
+              <Text style={s.detectBtnTxt}>{locLoading ? t('profile_detecting') : t('profile_detect')}</Text>
             </Pressable>
           </View>
 
@@ -198,7 +201,7 @@ export default function ProfileScreen() {
                   onPress={() => Linking.openSettings()}
                   style={({ pressed }) => [s.settingsLink, pressed && { opacity: 0.7 }]}
                 >
-                  <Text style={s.settingsLinkTxt}>Open Settings →</Text>
+                  <Text style={s.settingsLinkTxt}>{t('profile_open_settings')}</Text>
                 </Pressable>
               )}
             </View>
@@ -210,7 +213,7 @@ export default function ProfileScreen() {
                 style={s.manualInput}
                 value={manualArea}
                 onChangeText={setManualArea}
-                placeholder="Type your area or city…"
+                placeholder={t('profile_manual_placeholder')}
                 placeholderTextColor="#9ca3af"
                 returnKeyType="done"
                 onSubmitEditing={handleManualSave}
@@ -220,7 +223,7 @@ export default function ProfileScreen() {
                 onPress={handleManualSave}
                 style={({ pressed }) => [s.manualSaveBtn, pressed && { opacity: 0.7 }]}
               >
-                <Text style={s.manualSaveTxt}>Save</Text>
+                <Text style={s.manualSaveTxt}>{t('profile_save')}</Text>
               </Pressable>
             </View>
           )}
@@ -232,7 +235,7 @@ export default function ProfileScreen() {
         {menuItems.map((item, i) => {
           const badge = getBadge(item.badgeKey);
           return (
-            <PressableScale key={i} style={[s.menuItem, item.highlight && s.menuItemHL]} scale={0.985} onPress={item.label === 'Settings' ? () => setSettingsVisible(true) : item.label === 'Help & Support' ? () => setHelpVisible(true) : item.route ? () => router.push(item.route!) : undefined}>
+            <PressableScale key={i} style={[s.menuItem, item.highlight && s.menuItemHL]} scale={0.985} onPress={item.action === 'settings' ? () => setSettingsVisible(true) : item.action === 'help' ? () => setHelpVisible(true) : item.route ? () => router.push(item.route!) : undefined}>
               <View style={[s.menuIcon, item.highlight && s.menuIconHL]}>
                 <Text style={{ fontSize: 18 }}>{item.icon}</Text>
               </View>
@@ -254,7 +257,7 @@ export default function ProfileScreen() {
       {/* Logout */}
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 36 }}>
         <PressableScale style={s.logoutBtn} scale={0.98} onPress={handleLogout}>
-          <Text style={s.logoutText}>🚪  Sign Out</Text>
+          <Text style={s.logoutText}>{t('profile_sign_out')}</Text>
         </PressableScale>
       </View>
     </ScrollView>

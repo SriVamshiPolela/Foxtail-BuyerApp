@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 import { fetchReferralStats, type ReferralStats } from '@/services/user';
+import { useLanguage } from '@/context/language-context';
 
 const BRAND  = '#c75a28';
 const GREEN  = '#16a34a';
@@ -27,6 +28,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function ReferralScreen() {
+  const { t } = useLanguage();
   const userId = useAuthStore((s) => s.userId);
   const [stats,   setStats]   = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ export default function ReferralScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
           <Text style={s.backArrow}>←</Text>
         </Pressable>
-        <Text style={s.headerTitle}>Refer & Earn</Text>
+        <Text style={s.headerTitle}>{t('referral_title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -77,11 +79,8 @@ export default function ReferralScreen() {
         {/* Hero card */}
         <View style={s.hero}>
           <Text style={s.heroEmoji}>🎁</Text>
-          <Text style={s.heroTitle}>Invite friends,{'\n'}earn rewards</Text>
-          <Text style={s.heroSub}>
-            You get <Text style={s.heroHighlight}>{fmt(100)}</Text> for every friend who places their first order.
-            {'\n'}They get <Text style={s.heroHighlight}>{fmt(50)}</Text> off their first order instantly.
-          </Text>
+          <Text style={s.heroTitle}>{t('referral_hero_title')}</Text>
+          <Text style={s.heroSub}>{t('referral_hero_sub')}</Text>
         </View>
 
         {/* Code card */}
@@ -92,21 +91,21 @@ export default function ReferralScreen() {
         ) : stats ? (
           <>
             <View style={s.codeCard}>
-              <Text style={s.codeLbl}>Your referral code</Text>
+              <Text style={s.codeLbl}>{t('referral_code_label')}</Text>
               <View style={s.codeRow}>
                 <Text style={s.code}>{stats.code}</Text>
                 <Pressable
                   onPress={handleCopy}
                   style={({ pressed }) => [s.copyBtn, pressed && { opacity: 0.75 }]}
                 >
-                  <Text style={s.copyBtnTxt}>{copied ? '✓ Copied' : 'Copy'}</Text>
+                  <Text style={s.copyBtnTxt}>{copied ? t('referral_copied') : t('referral_copy')}</Text>
                 </Pressable>
               </View>
               <Pressable
                 onPress={handleShare}
                 style={({ pressed }) => [s.shareBtn, pressed && { opacity: 0.85 }]}
               >
-                <Text style={s.shareBtnTxt}>Share with friends  ↗</Text>
+                <Text style={s.shareBtnTxt}>{t('referral_share')}</Text>
               </Pressable>
             </View>
 
@@ -114,35 +113,35 @@ export default function ReferralScreen() {
             <View style={s.statsRow}>
               <View style={s.statBox}>
                 <Text style={s.statVal}>{stats.totalReferrals}</Text>
-                <Text style={s.statLbl}>Friends Invited</Text>
+                <Text style={s.statLbl}>{t('referral_friends_invited')}</Text>
               </View>
               <View style={s.statDivider} />
               <View style={s.statBox}>
                 <Text style={s.statVal}>{stats.rewardedReferrals}</Text>
-                <Text style={s.statLbl}>Orders Placed</Text>
+                <Text style={s.statLbl}>{t('referral_orders_placed')}</Text>
               </View>
               <View style={s.statDivider} />
               <View style={s.statBox}>
                 <Text style={[s.statVal, { color: GREEN }]}>{fmt(stats.totalEarnedRupees)}</Text>
-                <Text style={s.statLbl}>Total Earned</Text>
+                <Text style={s.statLbl}>{t('referral_total_earned')}</Text>
               </View>
             </View>
 
             {/* Referral history */}
             {stats.referrals.length > 0 && (
               <View style={s.section}>
-                <Text style={s.sectionTitle}>Your referrals</Text>
+                <Text style={s.sectionTitle}>{t('referral_your_referrals')}</Text>
                 {stats.referrals.map((r) => (
                   <View key={r.id} style={s.referralRow}>
                     <View style={[s.statusDot, { backgroundColor: r.status === 'rewarded' ? GREEN : AMBER }]} />
                     <View style={{ flex: 1 }}>
                       <Text style={s.referralDesc}>
-                        {r.status === 'rewarded' ? 'Friend placed first order' : 'Friend signed up — awaiting first order'}
+                        {r.status === 'rewarded' ? t('referral_rewarded') : t('referral_awaiting')}
                       </Text>
                       <Text style={s.referralDate}>{timeAgo(r.createdAt)}</Text>
                     </View>
                     <Text style={[s.referralAmt, { color: r.status === 'rewarded' ? GREEN : '#9ca3af' }]}>
-                      {r.status === 'rewarded' ? `+${fmt(r.rewardRupees)}` : 'Pending'}
+                      {r.status === 'rewarded' ? `+${fmt(r.rewardRupees)}` : t('referral_pending')}
                     </Text>
                   </View>
                 ))}
@@ -153,11 +152,11 @@ export default function ReferralScreen() {
 
         {/* How it works */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>How it works</Text>
+          <Text style={s.sectionTitle}>{t('referral_how_title')}</Text>
           {[
-            { step: '1', icon: '📤', title: 'Share your code', desc: 'Send your unique code to friends via WhatsApp, SMS, or any app.' },
-            { step: '2', icon: '🆕', title: 'Friend signs up', desc: 'They enter your code at registration and get ₹50 off instantly.' },
-            { step: '3', icon: '📦', title: 'Friend places first order', desc: 'Once their first order is delivered, ₹100 is credited to your Harvest Wallet.' },
+            { step: '1', icon: '📤', title: t('referral_step1_title'), desc: t('referral_step1_desc') },
+            { step: '2', icon: '🆕', title: t('referral_step2_title'), desc: t('referral_step2_desc') },
+            { step: '3', icon: '📦', title: t('referral_step3_title'), desc: t('referral_step3_desc') },
           ].map((item) => (
             <View key={item.step} style={s.howRow}>
               <View style={s.howStep}>
@@ -177,10 +176,10 @@ export default function ReferralScreen() {
         {/* Terms */}
         <View style={s.termsBox}>
           <Text style={s.termsTxt}>
-            • Referral reward credited after friend's first delivered order{'\n'}
-            • Friend must be a new user (never registered before){'\n'}
-            • One referral code per account{'\n'}
-            • Maximum 10 referrals per month per user
+            {'• '}{t('referral_terms_1')}{'\n'}
+            {'• '}{t('referral_terms_2')}{'\n'}
+            {'• '}{t('referral_terms_3')}{'\n'}
+            {'• '}{t('referral_terms_4')}
           </Text>
         </View>
       </ScrollView>

@@ -9,6 +9,7 @@ import { WishlistButton } from '@/components/wishlist-button';
 import { PressableScale } from '@/components/pressable-scale';
 import { getVendorById, getProducts } from '@/services/products';
 import { products as mockProducts } from '@/data/mock';
+import { useLanguage } from '@/context/language-context';
 import type { Product, Vendor } from '@/types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -17,6 +18,7 @@ const COL_GAP = 12;
 const CARD_W = (SCREEN_W - H_PAD * 2 - COL_GAP) / 2;
 
 export default function VendorStoreScreen() {
+  const { t } = useLanguage();
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [vendor, setVendor] = useState<Vendor | null>(null);
@@ -46,7 +48,7 @@ export default function VendorStoreScreen() {
               style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={s.backText}>← Back</Text>
+              <Text style={s.backText}>{t('vendor_back')}</Text>
             </Pressable>
           </SafeAreaView>
 
@@ -79,17 +81,17 @@ export default function VendorStoreScreen() {
           <View style={s.statsRow}>
             <View style={s.stat}>
               <Text style={s.statVal}>{loading ? '—' : products.length}</Text>
-              <Text style={s.statLbl}>Products</Text>
+              <Text style={s.statLbl}>{t('vendor_products')}</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
               <Text style={s.statVal}>★ {vendor?.rating?.toFixed(1) ?? '—'}</Text>
-              <Text style={s.statLbl}>Rating</Text>
+              <Text style={s.statLbl}>{t('vendor_rating')}</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
               <Text style={s.statVal}>{vendor?.distance ?? '—'}</Text>
-              <Text style={s.statLbl}>Distance</Text>
+              <Text style={s.statLbl}>{t('vendor_distance')}</Text>
             </View>
           </View>
         </View>
@@ -97,7 +99,7 @@ export default function VendorStoreScreen() {
         {/* Product Grid */}
         <View style={s.gridSection}>
           <Text style={s.gridTitle}>
-            Products by {vendor?.name ?? 'this vendor'}
+            {t('vendor_items')} · {vendor?.name ?? ''}
           </Text>
 
           {loading && (
@@ -109,8 +111,8 @@ export default function VendorStoreScreen() {
           {!loading && products.length === 0 && (
             <View style={s.center}>
               <Text style={{ fontSize: 48 }}>🌿</Text>
-              <Text style={s.emptyTitle}>No products listed yet</Text>
-              <Text style={s.emptySub}>Check back soon!</Text>
+              <Text style={s.emptyTitle}>{t('vendor_empty')}</Text>
+              <Text style={s.emptySub}>{t('vendor_empty')}</Text>
             </View>
           )}
 

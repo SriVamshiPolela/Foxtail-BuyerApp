@@ -10,6 +10,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { useUserStore } from '@/store/user';
 import { useAuthStore } from '@/store/auth';
 import { createAddressOnServer, updateAddressOnServer } from '@/services/user';
+import { useLanguage } from '@/context/language-context';
 import type { Address } from '@/store/user';
 
 const LABELS: Address['label'][] = ['Home', 'Work', 'Other'];
@@ -48,6 +49,7 @@ const BLANK: FormState = {
 };
 
 export default function AddressFormScreen() {
+  const { t } = useLanguage();
   const params = useLocalSearchParams<{ id?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const addresses = useUserStore((s) => s.addresses);
@@ -149,9 +151,9 @@ export default function AddressFormScreen() {
             style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={s.backText}>← Back</Text>
+            <Text style={s.backText}>{t('address_book_back')}</Text>
           </Pressable>
-          <Text style={s.headerTitle}>{isEdit ? 'Edit Address' : 'New Address'}</Text>
+          <Text style={s.headerTitle}>{isEdit ? t('address_form_title_edit') : t('address_form_title_add')}</Text>
           <View style={{ width: 64 }} />
         </SafeAreaView>
 
@@ -220,8 +222,8 @@ export default function AddressFormScreen() {
               onPress={() => patch('isDefault', !form.isDefault)}
             >
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={s.toggleLabel}>Set as default address</Text>
-                <Text style={s.toggleSub}>Used automatically at checkout</Text>
+                <Text style={s.toggleLabel}>{t('address_form_label')}</Text>
+                <Text style={s.toggleSub}>{t('address_book_set_default')}</Text>
               </View>
               <View style={[s.toggle, form.isDefault && s.toggleOn]}>
                 <View style={[s.toggleKnob, form.isDefault && s.toggleKnobOn]} />
@@ -237,7 +239,7 @@ export default function AddressFormScreen() {
           <PressableScale style={[s.saveBtn, saving && { opacity: 0.7 }]} scale={0.97} onPress={handleSave} disabled={saving}>
             {saving
               ? <ActivityIndicator color="#fff" />
-              : <Text style={s.saveBtnTxt}>{isEdit ? 'Save Changes' : 'Save Address'}</Text>
+              : <Text style={s.saveBtnTxt}>{isEdit ? t('address_form_update') : t('address_form_save')}</Text>
             }
           </PressableScale>
         </SafeAreaView>

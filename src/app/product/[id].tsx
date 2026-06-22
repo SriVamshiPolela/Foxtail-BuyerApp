@@ -8,9 +8,11 @@ import { PressableScale } from '@/components/pressable-scale';
 import { WishlistButton } from '@/components/wishlist-button';
 import { getProductById } from '@/services/products';
 import { useCartStore } from '@/store/cart';
+import { useLanguage } from '@/context/language-context';
 import type { Product } from '@/types';
 
 export default function ProductDetailScreen() {
+  const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export default function ProductDetailScreen() {
           style={({ pressed }) => [s.iconBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={s.iconBtnText}>← Back</Text>
+          <Text style={s.iconBtnText}>{t('product_back')}</Text>
         </Pressable>
         <Text style={s.topBarTitle} numberOfLines={1}>{product.name}</Text>
         <WishlistButton productId={id} style={[s.iconBtn, s.wishIconBtn]} size={20} />
@@ -100,7 +102,7 @@ export default function ProductDetailScreen() {
               onPress={() => router.push(`/vendor/${product.vendorId}`)}
               style={({ pressed }) => [s.visitStoreBtn, pressed && { opacity: 0.7 }]}
             >
-              <Text style={s.visitStoreTxt}>🏪  Visit Store →</Text>
+              <Text style={s.visitStoreTxt}>🏪  {t('product_visit_shop')}</Text>
             </Pressable>
           )}
 
@@ -128,7 +130,7 @@ export default function ProductDetailScreen() {
 
           {/* Description */}
           <View style={s.descSection}>
-            <Text style={s.descTitle}>About this product</Text>
+            <Text style={s.descTitle}>{t('product_about')}</Text>
             <Text style={s.descText}>{product.description}</Text>
           </View>
 
@@ -162,7 +164,7 @@ export default function ProductDetailScreen() {
       {/* Sticky Bottom CTA */}
       <SafeAreaView edges={['bottom']} style={s.bottomBar}>
         <View style={s.totalRow}>
-          <Text style={s.totalLabel}>Total</Text>
+          <Text style={s.totalLabel}>{t('checkout_total')}</Text>
           <Text style={s.totalValue}>₹{product.price * qty}</Text>
         </View>
         <PressableScale
@@ -171,7 +173,7 @@ export default function ProductDetailScreen() {
           scale={0.96}
         >
           <Text style={s.addCartBtnText}>
-            {added ? '✓ Added to Cart!' : alreadyInCart ? '✓ In Cart — Add More' : '🛒  Add to Cart'}
+            {added ? `✓ ${t('product_add_to_cart')}` : alreadyInCart ? `✓ ${t('product_add_more')}` : `🛒  ${t('product_add_to_cart')}`}
           </Text>
         </PressableScale>
       </SafeAreaView>

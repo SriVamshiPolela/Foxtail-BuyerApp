@@ -19,6 +19,7 @@ interface CatalogProduct {
   shipsTo: 'mandal' | 'district' | 'state' | 'national';
   rating: number;
   reviewCount: number;
+  status: 'active' | 'draft' | 'archived';
   createdAt: string;
 }
 
@@ -96,7 +97,7 @@ async function fetchCatalogProducts(params?: Record<string, string>): Promise<Ca
 }
 
 export async function getProducts(regionId?: string): Promise<Product[]> {
-  const raw = await fetchCatalogProducts();
+  const raw = await fetchCatalogProducts({ status: 'active' });
   if (!regionId) return raw.map(mapProduct);
   const min = SHIP_RANK[regionId] ?? 0;
   return raw.filter((p) => (SHIP_RANK[p.shipsTo] ?? 0) >= min).map(mapProduct);
@@ -106,19 +107,22 @@ export async function getProductById(id: string): Promise<Product | null> {
   const res = await fetch(`${CATALOG_API_BASE}/v1/products/${id}`);
   if (res.status === 404) return null;
   const body = await res.json();
-  return mapProduct(body.data as CatalogProduct);
+  const p = body.data as CatalogProduct;
+  if (p.status !== 'active') return null;
+  return mapProduct(p);
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
-  const raw = await fetchCatalogProducts();
+  const raw = await fetchCatalogProducts({ status: 'active' });
   return raw
+    .filter((p) => p.inStock)
     .sort((a, b) => b.rating - a.rating)
     .slice(0, 6)
     .map(mapProduct);
 }
 
 export async function getProductsByCategory(categoryId: string): Promise<Product[]> {
-  const raw = await fetchCatalogProducts({ category: categoryId });
+  const raw = await fetchCatalogProducts({ category: categoryId, status: 'active' });
   return raw.map(mapProduct);
 }
 

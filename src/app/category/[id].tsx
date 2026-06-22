@@ -9,6 +9,7 @@ import { CartButton } from '@/components/cart-button';
 import { WishlistButton } from '@/components/wishlist-button';
 import { getProductsByCategory, getCategories } from '@/services/products';
 import { products as mockProducts } from '@/data/mock';
+import { useLanguage } from '@/context/language-context';
 import type { Product, Category } from '@/types';
 
 // Keyword fallback when catalog API is offline
@@ -33,6 +34,7 @@ function mockFallback(categoryId: string): Product[] {
 }
 
 export default function CategoryScreen() {
+  const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
@@ -60,7 +62,7 @@ export default function CategoryScreen() {
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
         >
-          <Text style={s.backText}>← Back</Text>
+          <Text style={s.backText}>{t('category_back')}</Text>
         </Pressable>
         <View style={s.headerMid}>
           {category && <Text style={s.headerIcon}>{category.icon}</Text>}
@@ -68,7 +70,7 @@ export default function CategoryScreen() {
             {category?.name ?? 'Category'}
           </Text>
           {!loading && (
-            <Text style={s.headerSub}>{products.length} products</Text>
+            <Text style={s.headerSub}>{products.length} {t('category_products')}</Text>
           )}
         </View>
         <View style={{ width: 64 }} />
@@ -85,8 +87,8 @@ export default function CategoryScreen() {
         {!loading && products.length === 0 && (
           <View style={s.center}>
             <Text style={{ fontSize: 52 }}>🌿</Text>
-            <Text style={s.emptyTitle}>No products yet</Text>
-            <Text style={s.emptySub}>Vendors are adding products — check back soon!</Text>
+            <Text style={s.emptyTitle}>{t('category_empty')}</Text>
+            <Text style={s.emptySub}>{t('category_empty_sub')}</Text>
           </View>
         )}
 

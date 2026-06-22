@@ -73,8 +73,9 @@ export interface PlaceOrderBody {
 }
 
 function mapStatus(s: string): OrderStatus {
-  if (s === 'delivered')                        return 'delivered';
-  if (s === 'in_transit' || s === 'dispatched') return 'in-transit';
+  if (s === 'delivered')                                                  return 'delivered';
+  if (s === 'in_transit' || s === 'dispatched')                           return 'in-transit';
+  if (s === 'cancelled' || s === 'refund_initiated' || s === 'refunded')  return 'cancelled';
   return 'processing';
 }
 
@@ -116,9 +117,7 @@ export async function fetchOrders(userId: string, token: string): Promise<Order[
     if (!res.ok) return [];
     const json = await res.json() as { success: boolean; data?: ApiOrder[] };
     if (!json.success || !json.data) return [];
-    return json.data
-      .filter((o) => o.status !== 'cancelled' && o.status !== 'refunded' && o.status !== 'refund_initiated')
-      .map(toOrder);
+    return json.data.map(toOrder);
   } catch {
     return [];
   }
@@ -137,7 +136,23 @@ export async function fetchOrderById(orderId: string, token: string): Promise<Ap
   }
 }
 
-export async function placeOrder(body: PlaceOrderBody, token: string): Promise<ApiOrder> {
+export async function cancelOrder(orderId: string, reason: string, token: string): Promise<ApiOrder> {
+  const res = await fetch(`${ORDER_API_BASE}/v1/orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ reason }),
+  });
+  const json = await res.json() as { success: boolean; data?: ApiOrder; error?: { title: string } };
+  if (!json.success || !json.data) {
+    throw new Error(json.error?.title ?? 'Failed to cancel order');
+  }
+  return json.data;
+}
+
+export async function placeOrder(body: PlaceOrderBody, token: string): Promise<ApiOrder[]> {
   const res = await fetch(`${ORDER_API_BASE}/v1/orders`, {
     method: 'POST',
     headers: {
@@ -146,8 +161,8 @@ export async function placeOrder(body: PlaceOrderBody, token: string): Promise<A
     },
     body: JSON.stringify(body),
   });
-  const json = await res.json() as { success: boolean; data?: ApiOrder; error?: { title: string } };
-  if (!json.success || !json.data) {
+  const json = await res.json() as { success: boolean; data?: ApiOrder[]; error?: { title: string } };
+  if (!json.success || !json.data || json.data.length === 0) {
     throw new Error(json.error?.title ?? 'Failed to place order');
   }
   return json.data;

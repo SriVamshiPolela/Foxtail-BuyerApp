@@ -9,9 +9,11 @@ import { CartButton } from '@/components/cart-button';
 import { WishlistButton } from '@/components/wishlist-button';
 import { getFeaturedProducts, getCategories, getVendors } from '@/services/products';
 import { useUserStore } from '@/store/user';
+import { useLanguage } from '@/context/language-context';
 import type { Product, Category, Vendor } from '@/types';
 
 export default function HomeScreen() {
+  const { t } = useLanguage();
   const [featured, setFeatured] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -40,8 +42,8 @@ export default function HomeScreen() {
             <View style={s.brand}>
               <View style={s.brandIcon}><Text style={{ fontSize: 20 }}>🪔</Text></View>
               <View>
-                <Text style={s.brandName}>Harvest Connect</Text>
-                <Text style={s.brandSub}>Local Treasures, Delivered</Text>
+                <Text style={s.brandName}>{t('home_brand_name')}</Text>
+                <Text style={s.brandSub}>{t('home_tagline')}</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -66,14 +68,14 @@ export default function HomeScreen() {
             style={({ pressed }) => [s.locRow, pressed && { opacity: 0.75 }]}
           >
             <Text style={s.locText}>
-              📍 Delivering to{' '}
+              📍 {t('home_delivering_to')}{' '}
               <Text style={s.locCity}>{location}, {district.split(',')[0]} ▾</Text>
             </Text>
           </Pressable>
 
           <Pressable style={s.searchRow} onPress={() => router.push('/search')}>
             <Text style={s.searchIcon}>🔍</Text>
-            <Text style={s.searchPlaceholder}>Search vegetables, handlooms, spices...</Text>
+            <Text style={s.searchPlaceholder}>{t('home_search_placeholder')}</Text>
             <View style={s.filterBtn}>
               <Text style={{ fontSize: 13 }}>⚙️</Text>
             </View>
@@ -87,8 +89,8 @@ export default function HomeScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
             <Text style={{ fontSize: 20 }}>🛡️</Text>
             <View>
-              <Text style={s.trustTitle}>Verified Local Vendors</Text>
-              <Text style={s.trustSub}>Government ID & Quality Checked</Text>
+              <Text style={s.trustTitle}>{t('home_trust_title')}</Text>
+              <Text style={s.trustSub}>{t('home_trust_sub')}</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -97,7 +99,7 @@ export default function HomeScreen() {
                 <Text style={{ fontSize: 10 }}>{e}</Text>
               </View>
             ))}
-            <Text style={s.trustCount}>2,340+</Text>
+            <Text style={s.trustCount}>{t('home_trust_count')}</Text>
           </View>
         </View>
       </View>
@@ -108,12 +110,12 @@ export default function HomeScreen() {
       ) : (
         <View style={s.catSection}>
           <View style={[s.sectionHead, { paddingHorizontal: 16 }]}>
-            <Text style={s.sectionTitle}>Shop by Category</Text>
+            <Text style={s.sectionTitle}>{t('home_shop_by_category')}</Text>
             <Pressable
               onPress={() => router.navigate('/(tabs)/explore')}
               style={({ pressed }) => pressed && { opacity: 0.6 }}
             >
-              <Text style={s.seeAll}>View All ›</Text>
+              <Text style={s.seeAll}>{t('home_view_all')}</Text>
             </Pressable>
           </View>
           <ScrollView
@@ -141,14 +143,14 @@ export default function HomeScreen() {
         <View style={s.section}>
           <View style={s.sectionHead}>
             <View>
-              <Text style={s.sectionTitle}>Near Your Mandal</Text>
+              <Text style={s.sectionTitle}>{t('home_near_mandal')}</Text>
               <Text style={s.sectionSub}>{location}, {district}</Text>
             </View>
             <Pressable
               onPress={() => router.push('/vendors')}
               style={({ pressed }) => pressed && { opacity: 0.6 }}
             >
-              <Text style={s.seeAll}>See All ›</Text>
+              <Text style={s.seeAll}>{t('home_see_all')}</Text>
             </Pressable>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -163,7 +165,7 @@ export default function HomeScreen() {
                       <Text style={s.vendorMeta}>★ {v.rating} · {v.distance}</Text>
                     </View>
                   </View>
-                  <View style={s.visitBtn}><Text style={s.visitTxt}>Visit Shop →</Text></View>
+                  <View style={s.visitBtn}><Text style={s.visitTxt}>{t('home_visit_shop')}</Text></View>
                 </PressableScale>
               ))}
             </View>
@@ -175,12 +177,12 @@ export default function HomeScreen() {
       {!loading && (
         <View style={s.section}>
           <View style={s.sectionHead}>
-            <Text style={s.sectionTitle}>Featured Products</Text>
+            <Text style={s.sectionTitle}>{t('home_featured_products')}</Text>
             <Pressable
               onPress={() => router.navigate('/(tabs)/explore')}
               style={({ pressed }) => pressed && { opacity: 0.6 }}
             >
-              <Text style={s.seeAll}>View All ›</Text>
+              <Text style={s.seeAll}>{t('home_view_all')}</Text>
             </Pressable>
           </View>
           <View style={{ gap: 12 }}>
@@ -225,10 +227,10 @@ export default function HomeScreen() {
       {/* Regional Banner */}
       <View style={[s.section, { paddingBottom: 32 }]}>
         <PressableScale style={s.banner} scale={0.98}>
-          <View style={s.bannerBadge}><Text style={s.bannerBadgeText}>Telangana Special</Text></View>
-          <Text style={s.bannerTitle}>Discover Authentic{'\n'}Telangana Crafts</Text>
-          <Text style={s.bannerSub}>Bidri work, Nirmal paintings & more</Text>
-          <View style={s.bannerBtn}><Text style={s.bannerBtnText}>Explore Now →</Text></View>
+          <View style={s.bannerBadge}><Text style={s.bannerBadgeText}>{t('home_banner_badge')}</Text></View>
+          <Text style={s.bannerTitle}>{t('home_banner_title')}</Text>
+          <Text style={s.bannerSub}>{t('home_banner_sub')}</Text>
+          <View style={s.bannerBtn}><Text style={s.bannerBtnText}>{t('home_banner_btn')}</Text></View>
           <Text style={s.bannerDeco}>🏺</Text>
         </PressableScale>
       </View>

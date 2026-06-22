@@ -7,11 +7,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
+import { useLanguage } from '@/context/language-context';
 
 const BRAND   = '#c75a28';
 const WARM_BG = '#fffaf7';
 
 export default function LoginScreen() {
+  const { t } = useLanguage();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const setPendingPhone = useAuthStore((s) => s.setPendingPhone);
@@ -52,8 +54,8 @@ export default function LoginScreen() {
           <View style={s.logoWrap}>
             <Text style={{ fontSize: 30 }}>🪔</Text>
           </View>
-          <Text style={s.appName}>Harvest Connect</Text>
-          <Text style={s.tagline}>Farm fresh, straight to your door</Text>
+          <Text style={s.appName}>{t('login_app_name')}</Text>
+          <Text style={s.tagline}>{t('login_hero_tagline')}</Text>
 
           <View style={s.emojiBar}>
             {['🥦', '🧅', '🍅', '🌾', '🫙', '🧵', '🏺', '🌿'].map((e, i) => (
@@ -66,20 +68,20 @@ export default function LoginScreen() {
 
         {/* ── Card ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>Welcome back 👋</Text>
-          <Text style={s.cardSub}>Enter your phone number to continue</Text>
+          <Text style={s.cardTitle}>{t('login_welcome')}</Text>
+          <Text style={s.cardSub}>{t('login_card_sub')}</Text>
 
           <View style={s.trustRow}>
-            <View style={s.chip}><Text style={s.chipTxt}>🔒  Secure OTP</Text></View>
-            <View style={s.chip}><Text style={s.chipTxt}>⚡  Instant login</Text></View>
+            <View style={s.chip}><Text style={s.chipTxt}>🔒  {t('login_secure_otp')}</Text></View>
+            <View style={s.chip}><Text style={s.chipTxt}>⚡  {t('login_instant')}</Text></View>
           </View>
 
-          <Text style={s.label}>Mobile number</Text>
+          <Text style={s.label}>{t('login_phone_label')}</Text>
           <View style={[s.inputWrap, focused && s.inputActive]}>
             <Text style={s.inputIcon}>📱</Text>
             <TextInput
               style={s.input}
-              placeholder="+91 XXXXX XXXXX"
+              placeholder={t('login_phone_placeholder')}
               placeholderTextColor="#b0b8c4"
               value={phone}
               onChangeText={setPhone}
@@ -100,13 +102,13 @@ export default function LoginScreen() {
           >
             {busy
               ? <ActivityIndicator color="#fff" />
-              : <Text style={s.primaryBtnTxt}>Send OTP  →</Text>
+              : <Text style={s.primaryBtnTxt}>{t('login_send_otp')}</Text>
             }
           </TouchableOpacity>
 
           <View style={s.divRow}>
             <View style={s.divLine} />
-            <Text style={s.divTxt}>New to HarvestConnect?</Text>
+            <Text style={s.divTxt}>{t('login_new_to')}</Text>
             <View style={s.divLine} />
           </View>
 
@@ -115,14 +117,14 @@ export default function LoginScreen() {
             onPress={() => router.replace('/auth/register')}
             activeOpacity={0.85}
           >
-            <Text style={s.ghostBtnTxt}>Create an account</Text>
+            <Text style={s.ghostBtnTxt}>{t('login_create_account')}</Text>
           </TouchableOpacity>
 
           <View style={s.proofRow}>
             <Text style={s.proofTxt}>
-              🌟  Trusted by{' '}
+              🌟  {t('login_trusted_by')}{' '}
               <Text style={{ color: BRAND, fontWeight: '700' }}>2,340+</Text>
-              {' '}buyers across Telangana
+              {' '}{t('login_trusted_suffix')}
             </Text>
           </View>
         </View>

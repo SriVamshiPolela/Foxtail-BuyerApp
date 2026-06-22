@@ -194,6 +194,28 @@ export async function applyReferralCode(userId: string, code: string): Promise<v
   if (!json.success) throw new Error(json.error?.title ?? 'Failed to apply referral code');
 }
 
+export async function debitWallet(
+  userId: string,
+  amountPaise: number,
+  orderId: string,
+): Promise<{ balance: number; transaction: WalletTransaction }> {
+  const res  = await fetch(`${USER_API_BASE}/v1/users/${userId}/wallet/debit`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ amount: amountPaise, orderId }),
+  });
+  const json = await res.json() as {
+    success: boolean;
+    data?: { balance: number; transaction: RawWalletTransaction };
+    error?: { title: string };
+  };
+  if (!json.success || !json.data) throw new Error(json.error?.title ?? 'Wallet debit failed');
+  return {
+    balance:     toRupees(json.data.balance),
+    transaction: mapTxn(json.data.transaction),
+  };
+}
+
 export async function topupWallet(
   userId: string,
   amountRupees: number,           // caller passes ₹, we multiply to paise for API

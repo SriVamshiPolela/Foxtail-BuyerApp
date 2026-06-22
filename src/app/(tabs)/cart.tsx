@@ -7,6 +7,7 @@ import { ShippabilityBadge } from '@/components/buyer-ui';
 import { PressableScale } from '@/components/pressable-scale';
 import { useCartStore } from '@/store/cart';
 import { useUserStore } from '@/store/user';
+import { useLanguage } from '@/context/language-context';
 
 function Checkbox({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
   return (
@@ -32,6 +33,7 @@ function PriceRow({ label, value, green, bold }: { label: string; value: string;
 }
 
 export default function CartScreen() {
+  const { t } = useLanguage();
   const items     = useCartStore((s) => s.items);
   const removeItem = useCartStore((s) => s.removeItem);
   const updateQty  = useCartStore((s) => s.updateQty);
@@ -76,13 +78,13 @@ export default function CartScreen() {
       <View style={s.emptyState}>
         <SafeAreaView edges={['top']}>
           <View style={s.header}>
-            <Text style={s.title}>Shopping Cart</Text>
+            <Text style={s.title}>{t('cart_title')}</Text>
           </View>
         </SafeAreaView>
         <View style={s.emptyInner}>
           <Text style={{ fontSize: 64 }}>🛒</Text>
-          <Text style={s.emptyTitle}>Your cart is empty</Text>
-          <Text style={s.emptyDesc}>Add products from Home or Explore to get started.</Text>
+          <Text style={s.emptyTitle}>{t('cart_empty_title')}</Text>
+          <Text style={s.emptyDesc}>{t('cart_empty_desc')}</Text>
         </View>
       </View>
     );
@@ -92,9 +94,9 @@ export default function CartScreen() {
     <ScrollView style={s.screen} showsVerticalScrollIndicator={false}>
       <SafeAreaView edges={['top']}>
         <View style={s.header}>
-          <Text style={s.title}>Shopping Cart</Text>
+          <Text style={s.title}>{t('cart_title')}</Text>
           <View style={s.itemCountBadge}>
-            <Text style={s.itemCountText}>{totalItemCount} items</Text>
+            <Text style={s.itemCountText}>{totalItemCount} {t('home_items')}</Text>
           </View>
         </View>
 
@@ -113,97 +115,128 @@ export default function CartScreen() {
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.addrTitle}>Delivering to {selectedAddress?.label ?? 'Home'}</Text>
+                  <Text style={s.addrTitle}>{t('cart_delivering_to')} {selectedAddress?.label ?? 'Home'}</Text>
                   <Text style={s.addrSub}>
                     {selectedAddress
                       ? `${selectedAddress.line1}, ${selectedAddress.city} - ${selectedAddress.pincode}`
-                      : 'Tap to add a delivery address'}
+                      : t('cart_no_address')}
                   </Text>
                   {selectedAddress && (
                     <Text style={s.addrName}>{selectedAddress.name}  ·  {selectedAddress.phone}</Text>
                   )}
                 </View>
               </View>
-              <Text style={s.changeBtn}>Change ›</Text>
+              <Text style={s.changeBtn}>{t('cart_change')}</Text>
             </View>
           </PressableScale>
         </View>
 
-        {/* Cart Items */}
+        {/* Cart Items — grouped by store */}
         <View style={s.section}>
           {/* Select All row */}
           <Pressable style={s.selectAllRow} onPress={toggleAll}>
             <Checkbox checked={isAllSelected} onToggle={toggleAll} />
             <Text style={s.selectAllText}>
-              {isAllSelected ? 'Deselect All' : 'Select All'}
+              {isAllSelected ? t('cart_deselect_all') : t('cart_select_all')}
             </Text>
             {!isAllSelected && selectedItems.length > 0 && (
-              <Text style={s.selectAllCount}>{selectedItems.length} of {items.length} selected</Text>
+              <Text style={s.selectAllCount}>{selectedItems.length} {t('cart_selected_of')} {items.length} {t('cart_selected')}</Text>
             )}
           </Pressable>
 
-          <View style={{ gap: 12 }}>
-            {items.map((item) => {
-              const checked = !uncheckedIds.has(item.product.id);
-              return (
-                <View key={item.product.id} style={[s.card, !checked && s.cardDimmed]}>
-                  <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-                    {/* Checkbox */}
-                    <View style={{ paddingTop: 4 }}>
-                      <Checkbox checked={checked} onToggle={() => toggleItem(item.product.id)} />
-                    </View>
+          <View style={{ gap: 14 }}>
+            {Object.values(
+              items.reduce<Record<string, { vendorId: string; storeName: string; storeItems: typeof items }>>((acc, item) => {
+                const key = item.product.vendorId;
+                if (!acc[key]) acc[key] = { vendorId: key, storeName: item.product.vendor, storeItems: [] };
+                acc[key].storeItems.push(item);
+                return acc;
+              }, {})
+            ).map(({ vendorId, storeName, storeItems }) => (
+              <View key={vendorId} style={s.storeGroup}>
+                {/* Store Header */}
+                <View style={s.storeHeader}>
+                  <Text style={s.storeIcon}>🏪</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.storeName} numberOfLines={1}>{storeName}</Text>
+                    <Text style={s.storeLocation} numberOfLines={1}>📍 {storeItems[0]!.product.location}</Text>
+                  </View>
+                  <Text style={s.storeCount}>{storeItems.length} item{storeItems.length !== 1 ? 's' : ''}</Text>
+                </View>
 
-                    {/* Thumbnail */}
-                    <PressableScale style={s.itemImg} scale={0.94} onPress={() => {}}>
-                      <Text style={{ fontSize: 32 }}>{item.product.image}</Text>
-                    </PressableScale>
+                {/* Items for this store */}
+                <View style={{ gap: 0 }}>
+                  {storeItems.map((item, idx) => {
+                    const checked = !uncheckedIds.has(item.product.id);
+                    const isLast  = idx === storeItems.length - 1;
+                    return (
+                      <View
+                        key={item.product.id}
+                        style={[
+                          s.storeItem,
+                          !isLast && s.storeItemBorder,
+                          !checked && s.cardDimmed,
+                        ]}
+                      >
+                        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                          {/* Checkbox */}
+                          <View style={{ paddingTop: 4 }}>
+                            <Checkbox checked={checked} onToggle={() => toggleItem(item.product.id)} />
+                          </View>
 
-                    {/* Details */}
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={s.itemName} numberOfLines={1}>{item.product.name}</Text>
-                          <Text style={s.itemVendor}>{item.product.vendor}</Text>
-                          <View style={{ marginTop: 5 }}>
-                            <ShippabilityBadge level={item.product.shippability} />
+                          {/* Thumbnail */}
+                          <PressableScale style={s.itemImg} scale={0.94} onPress={() => {}}>
+                            <Text style={{ fontSize: 32 }}>{item.product.image}</Text>
+                          </PressableScale>
+
+                          {/* Details */}
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={s.itemName} numberOfLines={1}>{item.product.name}</Text>
+                                <View style={{ marginTop: 5 }}>
+                                  <ShippabilityBadge level={item.product.shippability} />
+                                </View>
+                              </View>
+                              <Pressable
+                                onPress={() => {
+                                  removeItem(item.product.id);
+                                  setUncheckedIds((prev) => { const n = new Set(prev); n.delete(item.product.id); return n; });
+                                }}
+                                style={({ pressed }) => [s.removeBtn, pressed && { opacity: 0.6, transform: [{ scale: 0.85 }] }]}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
+                                <Text style={s.removeBtnText}>✕</Text>
+                              </Pressable>
+                            </View>
+                            <View style={s.itemBottom}>
+                              <View style={s.qtyRow}>
+                                <Pressable
+                                  onPress={() => updateQty(item.product.id, -1)}
+                                  style={({ pressed }) => [s.qtyBtn, s.qtyBtnMinus, pressed && { opacity: 0.7 }]}
+                                >
+                                  <Text style={s.qtyBtnText}>−</Text>
+                                </Pressable>
+                                <Text style={s.qtyText}>{item.quantity}</Text>
+                                <Pressable
+                                  onPress={() => updateQty(item.product.id, 1)}
+                                  style={({ pressed }) => [s.qtyBtn, s.qtyBtnPlus, pressed && { opacity: 0.7 }]}
+                                >
+                                  <Text style={[s.qtyBtnText, { color: '#fff' }]}>+</Text>
+                                </Pressable>
+                              </View>
+                              <Text style={[s.itemPrice, !checked && { color: '#9ca3af' }]}>
+                                ₹{item.product.price * item.quantity}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                        <Pressable
-                          onPress={() => {
-                            removeItem(item.product.id);
-                            setUncheckedIds((prev) => { const n = new Set(prev); n.delete(item.product.id); return n; });
-                          }}
-                          style={({ pressed }) => [s.removeBtn, pressed && { opacity: 0.6, transform: [{ scale: 0.85 }] }]}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Text style={s.removeBtnText}>✕</Text>
-                        </Pressable>
                       </View>
-                      <View style={s.itemBottom}>
-                        <View style={s.qtyRow}>
-                          <Pressable
-                            onPress={() => updateQty(item.product.id, -1)}
-                            style={({ pressed }) => [s.qtyBtn, s.qtyBtnMinus, pressed && { opacity: 0.7 }]}
-                          >
-                            <Text style={s.qtyBtnText}>−</Text>
-                          </Pressable>
-                          <Text style={s.qtyText}>{item.quantity}</Text>
-                          <Pressable
-                            onPress={() => updateQty(item.product.id, 1)}
-                            style={({ pressed }) => [s.qtyBtn, s.qtyBtnPlus, pressed && { opacity: 0.7 }]}
-                          >
-                            <Text style={[s.qtyBtnText, { color: '#fff' }]}>+</Text>
-                          </Pressable>
-                        </View>
-                        <Text style={[s.itemPrice, !checked && { color: '#9ca3af' }]}>
-                          ₹{item.product.price * item.quantity}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
+                    );
+                  })}
                 </View>
-              );
-            })}
+              </View>
+            ))}
           </View>
         </View>
 
@@ -212,14 +245,14 @@ export default function CartScreen() {
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <TextInput
               style={s.couponInput}
-              placeholder="Enter coupon code"
+              placeholder={t('cart_coupon_placeholder')}
               placeholderTextColor="#9ca3af"
               value={coupon}
               onChangeText={setCoupon}
               autoCapitalize="characters"
             />
             <PressableScale style={s.applyBtn} scale={0.96}>
-              <Text style={s.applyBtnText}>Apply</Text>
+              <Text style={s.applyBtnText}>{t('cart_apply')}</Text>
             </PressableScale>
           </View>
         </View>
@@ -228,7 +261,7 @@ export default function CartScreen() {
         <View style={s.section}>
           <View style={[s.card, { backgroundColor: '#fafafa' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={s.summaryTitle}>Price Details</Text>
+              <Text style={s.summaryTitle}>{t('cart_price_details')}</Text>
               {!isAllSelected && (
                 <Text style={s.selectionNote}>
                   {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected · {selectedQtyCount} qty
@@ -236,11 +269,11 @@ export default function CartScreen() {
               )}
             </View>
             <View style={{ gap: 10 }}>
-              <PriceRow label="Subtotal" value={`₹${selectedSubtotal}`} />
-              <PriceRow label="Delivery Fee" value={`₹${delivery}`} />
-              <PriceRow label="Coupon Discount" value={`-₹${discount}`} green />
+              <PriceRow label={t('cart_subtotal')} value={`₹${selectedSubtotal}`} />
+              <PriceRow label={t('cart_delivery_fee')} value={`₹${delivery}`} />
+              <PriceRow label={t('cart_coupon_discount')} value={`-₹${discount}`} green />
               <View style={s.divider} />
-              <PriceRow label="Total Payable" value={noneSelected ? '₹0' : `₹${total}`} bold />
+              <PriceRow label={t('cart_total_payable')} value={noneSelected ? '₹0' : `₹${total}`} bold />
             </View>
           </View>
         </View>
@@ -253,13 +286,11 @@ export default function CartScreen() {
             onPress={noneSelected ? undefined : handleCheckout}
           >
             <Text style={s.checkoutBtnText}>
-              {noneSelected
-                ? 'Select items to continue'
-                : `Proceed to Checkout  →`}
+              {noneSelected ? t('cart_select_to_continue') : t('cart_proceed_checkout')}
             </Text>
           </PressableScale>
           {!noneSelected && (
-            <Text style={s.terms}>By placing order, you agree to our Terms & Conditions</Text>
+            <Text style={s.terms}>{t('cart_terms')}</Text>
           )}
         </View>
 
@@ -321,9 +352,26 @@ const s = StyleSheet.create({
   addrName: { fontSize: 10, color: '#9ca3af', marginTop: 2 },
   changeBtn: { fontSize: 12, color: '#c75a28', fontWeight: '700' },
 
+  storeGroup: {
+    backgroundColor: '#fff', borderRadius: 16,
+    borderWidth: 1, borderColor: '#f0f0f3',
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+  },
+  storeHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fff7f5', paddingHorizontal: 14, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: '#fde8dc',
+  },
+  storeIcon: { fontSize: 15 },
+  storeName: { fontSize: 13, fontWeight: '800', color: '#111827' },
+  storeLocation: { fontSize: 10, color: '#9a3412', marginTop: 1, fontWeight: '500' },
+  storeCount: { fontSize: 11, color: '#9a3412', fontWeight: '600', backgroundColor: '#fde8dc', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99 },
+  storeItem: { paddingHorizontal: 14, paddingVertical: 14 },
+  storeItemBorder: { borderBottomWidth: 1, borderBottomColor: '#f5f5f7' },
+
   itemImg: { width: 68, height: 68, backgroundColor: '#fff7f5', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   itemName: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  itemVendor: { fontSize: 10, color: '#9ca3af', marginTop: 1 },
   removeBtn: {
     width: 28, height: 28, backgroundColor: '#fef2f2', borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fecaca',

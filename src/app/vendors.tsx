@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/pressable-scale';
 import { getVendors } from '@/services/products';
+import { useLanguage } from '@/context/language-context';
 import type { Vendor } from '@/types';
 
 export default function VendorsScreen() {
+  const { t } = useLanguage();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,12 +29,12 @@ export default function VendorsScreen() {
               style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={s.backText}>← Back</Text>
+              <Text style={s.backText}>{t('vendors_back')}</Text>
             </Pressable>
             <View style={s.headerMid}>
-              <Text style={s.headerTitle}>Local Vendors</Text>
+              <Text style={s.headerTitle}>{t('vendors_title')}</Text>
               {!loading && (
-                <Text style={s.headerCount}>{vendors.length} vendors near you</Text>
+                <Text style={s.headerCount}>{vendors.length} {t('vendors_count')}</Text>
               )}
             </View>
             <View style={{ width: 64 }} />
@@ -68,7 +70,7 @@ export default function VendorsScreen() {
               <Text style={s.vendorDesc} numberOfLines={2}>{v.description}</Text>
             )}
             <View style={s.visitBtn}>
-              <Text style={s.visitTxt}>Visit Shop →</Text>
+              <Text style={s.visitTxt}>{t('vendors_visit')}</Text>
             </View>
           </PressableScale>
         ))}

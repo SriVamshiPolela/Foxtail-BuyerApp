@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useLanguage } from '@/context/language-context';
 
 const SCREEN_W = Dimensions.get('window').width;
-const H_PAD = 16;      // paddingHorizontal on the section
-const COL_GAP = 12;    // gap between the two columns
+const H_PAD = 16;
+const COL_GAP = 12;
 const CARD_W = (SCREEN_W - H_PAD * 2 - COL_GAP) / 2;
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -14,29 +16,67 @@ import { WishlistButton } from '@/components/wishlist-button';
 import { PressableScale } from '@/components/pressable-scale';
 import { getProducts } from '@/services/products';
 import { products as mockProducts } from '@/data/mock';
+import { useUserStore } from '@/store/user';
+import { lookupPincode } from '@/services/location';
 import type { Product } from '@/types';
 
 type RegionId = 'mandal' | 'district' | 'state' | 'national';
 
-const REGIONS: { id: RegionId; label: string; icon: string; sublabel: string }[] = [
-  { id: 'mandal',   label: 'Armoor',    icon: '🏘️', sublabel: 'Hyperlocal' },
-  { id: 'district', label: 'Nizamabad', icon: '🏙️', sublabel: 'District'   },
-  { id: 'state',    label: 'Telangana', icon: '🗺️', sublabel: 'State'      },
+interface RegionDef { id: RegionId; label: string; icon: string; sublabel: string }
+
+const FALLBACK_REGIONS: RegionDef[] = [
+  { id: 'mandal',   label: 'Nearby',    icon: '🏘️', sublabel: 'Hyperlocal' },
+  { id: 'district', label: 'District',  icon: '🏙️', sublabel: 'District'   },
+  { id: 'state',    label: 'State',     icon: '🗺️', sublabel: 'State'      },
   { id: 'national', label: 'All India', icon: '🇮🇳', sublabel: 'Nationwide' },
 ];
+// FALLBACK_REGIONS is only used as initial state; translated labels set after mount
 
 export default function ExploreScreen() {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const { t } = useLanguage();
+  const locationPincode = useUserStore((s) => s.locationPincode);
+  const location        = useUserStore((s) => s.location);
+  const district        = useUserStore((s) => s.district);
+
+  const [allProducts,    setAllProducts]    = useState<Product[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<RegionId>('mandal');
-  const [loading, setLoading] = useState(true);
+  const [loading,        setLoading]        = useState(true);
+  const [regions,        setRegions]        = useState<RegionDef[]>(FALLBACK_REGIONS);
 
   useEffect(() => {
-    // Fetch all products once — filter client-side on region change (instant, no re-fetch)
     getProducts()
       .then(setAllProducts)
       .catch(() => setAllProducts(mockProducts))
       .finally(() => setLoading(false));
   }, []);
+
+  // Refresh region labels whenever the screen is focused (location may have changed)
+  useFocusEffect(useCallback(() => {
+    async function resolveRegions() {
+      if (locationPincode && /^\d{6}$/.test(locationPincode)) {
+        const info = await lookupPincode(locationPincode);
+        if (info) {
+          setRegions([
+            { id: 'mandal',   label: info.name,     icon: '🏘️', sublabel: 'Hyperlocal' },
+            { id: 'district', label: info.district,  icon: '🏙️', sublabel: 'District'   },
+            { id: 'state',    label: info.state,     icon: '🗺️', sublabel: 'State'      },
+            { id: 'national', label: 'All India',    icon: '🇮🇳', sublabel: 'Nationwide' },
+          ]);
+          return;
+        }
+      }
+      // Fallback: use store's location/district strings
+      const districtName = district.split(',')[0]?.trim() || 'District';
+      const stateName    = district.split(',')[1]?.trim() || 'State';
+      setRegions([
+        { id: 'mandal',   label: location     || 'Nearby',   icon: '🏘️', sublabel: 'Hyperlocal' },
+        { id: 'district', label: districtName,               icon: '🏙️', sublabel: 'District'   },
+        { id: 'state',    label: stateName    || 'State',    icon: '🗺️', sublabel: 'State'      },
+        { id: 'national', label: 'All India',                icon: '🇮🇳', sublabel: 'Nationwide' },
+      ]);
+    }
+    resolveRegions();
+  }, [locationPincode, location, district]));
 
   const filtered = allProducts.filter((p) => p.shippability === selectedRegion);
   const countFor = (regionId: string) =>
@@ -48,7 +88,7 @@ export default function ExploreScreen() {
         {/* Header */}
         <View style={s.header}>
           <View style={s.headerRow}>
-            <Text style={s.title}>Explore Products</Text>
+            <Text style={s.title}>{t('explore_title')}</Text>
             <Pressable
               style={({ pressed }) => [s.filterBtn, pressed && { opacity: 0.7, backgroundColor: '#e5e7eb' }]}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -60,7 +100,7 @@ export default function ExploreScreen() {
             <Text style={{ marginRight: 8, fontSize: 14 }}>🔍</Text>
             <TextInput
               style={s.searchInput}
-              placeholder="Search products, vendors..."
+              placeholder={t('explore_search_placeholder')}
               placeholderTextColor="#9ca3af"
             />
           </View>
@@ -68,9 +108,9 @@ export default function ExploreScreen() {
 
         {/* Region Selector */}
         <View style={s.section}>
-          <Text style={s.regionLabel}>Shop by Region</Text>
+          <Text style={s.regionLabel}>{t('explore_region_label')}</Text>
           <View style={s.regionGrid}>
-            {REGIONS.map((r) => {
+            {regions.map((r) => {
               const count = loading ? null : countFor(r.id);
               const active = r.id === selectedRegion;
               return (
@@ -105,37 +145,33 @@ export default function ExploreScreen() {
         <View style={s.section}>
           <View style={s.gridHeader}>
             <Text style={s.gridInfo}>
-              {loading ? 'Loading…' : (
+              {loading ? t('explore_loading') : (
                 <>
                   <Text style={{ color: '#111827', fontWeight: '700' }}>{filtered.length}</Text>
-                  {' products in '}
+                  {' '}{t('explore_products_in')}{' '}
                   <Text style={{ color: '#111827', fontWeight: '700' }}>
-                    {REGIONS.find((r) => r.id === selectedRegion)?.label}
+                    {regions.find((r) => r.id === selectedRegion)?.label}
                   </Text>
                 </>
               )}
             </Text>
             <Pressable style={({ pressed }) => [s.sortBtnWrap, pressed && { opacity: 0.7 }]}>
-              <Text style={s.sortBtn}>Sort by ▾</Text>
+              <Text style={s.sortBtn}>{t('explore_sort_by')}</Text>
             </Pressable>
           </View>
 
           {loading && (
             <View style={s.centerMsg}>
               <ActivityIndicator size="large" color="#c75a28" />
-              <Text style={s.msgText}>Loading products…</Text>
+              <Text style={s.msgText}>{t('explore_loading')}</Text>
             </View>
           )}
 
           {!loading && filtered.length === 0 && (
             <View style={s.centerMsg}>
               <Text style={{ fontSize: 48 }}>🌿</Text>
-              <Text style={s.emptyTitle}>
-                No products in {REGIONS.find((r) => r.id === selectedRegion)?.label} yet
-              </Text>
-              <Text style={s.emptySubtitle}>
-                Vendors are joining — check another region or come back soon!
-              </Text>
+              <Text style={s.emptyTitle}>{t('explore_empty_title')}</Text>
+              <Text style={s.emptySubtitle}>{t('explore_empty_sub')}</Text>
             </View>
           )}
 

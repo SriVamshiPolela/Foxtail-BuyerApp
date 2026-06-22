@@ -10,9 +10,11 @@ import { PressableScale } from '@/components/pressable-scale';
 import { getProducts } from '@/services/products';
 import { useWishlistStore } from '@/store/wishlist';
 import { products as mockProducts } from '@/data/mock';
+import { useLanguage } from '@/context/language-context';
 import type { Product } from '@/types';
 
 export default function FavoritesScreen() {
+  const { t } = useLanguage();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const favoriteIds = useWishlistStore((s) => s.favoriteIds);
@@ -40,10 +42,10 @@ export default function FavoritesScreen() {
               <Text style={s.backText}>← Back</Text>
             </Pressable>
             <View style={s.headerMid}>
-              <Text style={s.headerTitle}>My Wishlist</Text>
+              <Text style={s.headerTitle}>{t('favorites_title')}</Text>
               {!loading && (
                 <Text style={s.headerCount}>
-                  {favoriteProducts.length} {favoriteProducts.length === 1 ? 'item' : 'items'}
+                  {favoriteProducts.length} {favoriteProducts.length === 1 ? t('favorites_item') : t('favorites_items')}
                 </Text>
               )}
             </View>
@@ -56,23 +58,21 @@ export default function FavoritesScreen() {
         {loading && (
           <View style={s.center}>
             <ActivityIndicator size="large" color="#c75a28" />
-            <Text style={s.loadingText}>Loading…</Text>
+            <Text style={s.loadingText}>{t('favorites_loading')}</Text>
           </View>
         )}
 
         {!loading && favoriteProducts.length === 0 && (
           <View style={s.emptyState}>
             <Text style={{ fontSize: 64 }}>🤍</Text>
-            <Text style={s.emptyTitle}>Your wishlist is empty</Text>
-            <Text style={s.emptySub}>
-              Tap the heart icon on any product to save it here
-            </Text>
+            <Text style={s.emptyTitle}>{t('favorites_empty_title')}</Text>
+            <Text style={s.emptySub}>{t('favorites_empty_sub')}</Text>
             <PressableScale
               style={s.exploreBtn}
               scale={0.97}
               onPress={() => router.push('/(tabs)/explore')}
             >
-              <Text style={s.exploreBtnText}>Explore Products →</Text>
+              <Text style={s.exploreBtnText}>{t('favorites_explore')}</Text>
             </PressableScale>
           </View>
         )}

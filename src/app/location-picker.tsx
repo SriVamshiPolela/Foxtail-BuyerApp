@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
   ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Linking,
@@ -7,35 +7,61 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
 import { useUserStore } from '@/store/user';
-import { detectLocation } from '@/services/location';
+import {
+  detectLocation, searchPlaces, getPlaceDetails, lookupLocationByName,
+  type PlaceSuggestion,
+} from '@/services/location';
+import { useLanguage } from '@/context/language-context';
 
 const BRAND = '#c75a28';
 
 const QUICK_LOCATIONS = [
-  { area: 'Kukatpally',     district: 'Medchal District, Telangana' },
-  { area: 'Kondapur',       district: 'Rangareddy District, Telangana' },
-  { area: 'Ameerpet',       district: 'Hyderabad District, Telangana' },
-  { area: 'Dilsukhnagar',   district: 'Hyderabad District, Telangana' },
-  { area: 'Secunderabad',   district: 'Hyderabad District, Telangana' },
-  { area: 'Warangal',       district: 'Hanamkonda District, Telangana' },
+  { area: 'Kukatpally',   district: 'Medchal District, Telangana',   pincode: '500072' },
+  { area: 'Kondapur',     district: 'Rangareddy District, Telangana', pincode: '500084' },
+  { area: 'Ameerpet',     district: 'Hyderabad District, Telangana',  pincode: '500016' },
+  { area: 'Dilsukhnagar', district: 'Hyderabad District, Telangana',  pincode: '500060' },
+  { area: 'Secunderabad', district: 'Hyderabad District, Telangana',  pincode: '500003' },
+  { area: 'Warangal',     district: 'Hanamkonda District, Telangana', pincode: '506002' },
 ];
 
 export default function LocationPickerScreen() {
-  const location  = useUserStore((s) => s.location);
-  const district  = useUserStore((s) => s.district);
-  const addresses = useUserStore((s) => s.addresses);
+  const { t } = useLanguage();
+  const location    = useUserStore((s) => s.location);
+  const district    = useUserStore((s) => s.district);
+  const addresses   = useUserStore((s) => s.addresses);
   const setLocation = useUserStore((s) => s.setLocation);
 
-  const [detecting, setDetecting]   = useState(false);
-  const [detectErr, setDetectErr]   = useState<string | null>(null);
-  const [query,     setQuery]       = useState('');
+  const [detecting,      setDetecting]      = useState(false);
+  const [detectErr,      setDetectErr]      = useState<string | null>(null);
+  const [query,          setQuery]          = useState('');
+  const [suggestions,    setSuggestions]    = useState<PlaceSuggestion[]>([]);
+  const [searching,      setSearching]      = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [lookupErr,      setLookupErr]      = useState<string | null>(null);
+
+  // Debounced Places Autocomplete as user types
+  useEffect(() => {
+    setSuggestions([]);
+    setLookupErr(null);
+    if (query.trim().length < 2) {
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      const results = await searchPlaces(query);
+      setSuggestions(results);
+      setSearching(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   async function handleDetect() {
     setDetecting(true);
     setDetectErr(null);
     try {
       const result = await detectLocation();
-      setLocation(result.locality, result.district);
+      setLocation(result.locality, result.district, result.pincode);
       router.back();
     } catch (err) {
       setDetectErr(err instanceof Error ? err.message : 'Could not detect location');
@@ -43,21 +69,46 @@ export default function LocationPickerScreen() {
     }
   }
 
-  function handlePick(area: string, dist: string) {
-    setLocation(area, dist);
+  async function handleSuggestionPick(s: PlaceSuggestion) {
+    setLoadingDetails(true);
+    setLookupErr(null);
+    const details = await getPlaceDetails(s.placeId, s.mainText, s.prefetched);
+    setLoadingDetails(false);
+    if (!details) {
+      setLookupErr('Could not load details for this location. Please try again.');
+      return;
+    }
+    setLocation(s.mainText, details.district, details.pincode);
     router.back();
   }
 
-  function handleManualSave() {
+  // Fallback: user pressed Enter without selecting a suggestion
+  async function handleManualSubmit() {
     const q = query.trim();
     if (!q) return;
-    setLocation(q, district);
+    // If suggestions exist, pick the first one
+    if (suggestions.length > 0) {
+      handleSuggestionPick(suggestions[0]);
+      return;
+    }
+    setLoadingDetails(true);
+    setLookupErr(null);
+    const details = await lookupLocationByName(q);
+    setLoadingDetails(false);
+    if (!details) {
+      setLookupErr(`"${q}" was not found. Try a nearby town, mandal, or area name.`);
+      return;
+    }
+    setLocation(q, details.district, details.pincode);
     router.back();
   }
 
-  const filtered = QUICK_LOCATIONS.filter((l) =>
-    !query || l.area.toLowerCase().includes(query.toLowerCase())
-  );
+  function handleQuickPick(area: string, dist: string, pincode?: string) {
+    setLocation(area, dist, pincode);
+    router.back();
+  }
+
+  const isTyping = query.trim().length >= 2;
 
   return (
     <KeyboardAvoidingView
@@ -74,9 +125,9 @@ export default function LocationPickerScreen() {
                 style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={s.backTxt}>← Back</Text>
+                <Text style={s.backTxt}>{t('address_book_back')}</Text>
               </Pressable>
-              <Text style={s.headerTitle}>Delivery Location</Text>
+              <Text style={s.headerTitle}>{t('location_title')}</Text>
               <View style={{ width: 60 }} />
             </View>
           </SafeAreaView>
@@ -94,18 +145,66 @@ export default function LocationPickerScreen() {
               style={s.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search area or type manually…"
+              placeholder={t('location_search_placeholder')}
               placeholderTextColor="#9ca3af"
-              returnKeyType="done"
-              onSubmitEditing={handleManualSave}
+              returnKeyType="search"
+              onSubmitEditing={handleManualSubmit}
               autoCorrect={false}
+              editable={!loadingDetails}
             />
-            {query.length > 0 && (
-              <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                <Text style={s.clearX}>✕</Text>
-              </Pressable>
-            )}
+            {(searching || loadingDetails)
+              ? <ActivityIndicator size="small" color={BRAND} />
+              : query.length > 0 && (
+                  <Pressable onPress={() => { setQuery(''); setSuggestions([]); setLookupErr(null); }} hitSlop={8}>
+                    <Text style={s.clearX}>✕</Text>
+                  </Pressable>
+                )
+            }
           </View>
+
+          {lookupErr && (
+            <View style={[s.errBox, { marginTop: 4 }]}>
+              <Text style={s.errTxt}>{lookupErr}</Text>
+            </View>
+          )}
+
+          {/* Autocomplete suggestions (while typing) */}
+          {isTyping && (
+            <View style={s.group}>
+              <Text style={s.groupLabel}>{t('location_suggestions').toUpperCase()}</Text>
+
+              {searching && suggestions.length === 0 && (
+                <View style={s.searchingRow}>
+                  <ActivityIndicator size="small" color={BRAND} />
+                  <Text style={s.searchingTxt}>Searching…</Text>
+                </View>
+              )}
+
+              {!searching && suggestions.length === 0 && (
+                <View style={s.searchingRow}>
+                  <Text style={s.searchingTxt}>No results — try a city or mandal name</Text>
+                </View>
+              )}
+
+              {suggestions.map((sug) => (
+                <Pressable
+                  key={sug.placeId}
+                  style={({ pressed }) => [s.row, pressed && { backgroundColor: '#fef6f2' }]}
+                  onPress={() => handleSuggestionPick(sug)}
+                  disabled={loadingDetails}
+                >
+                  <View style={s.rowIcon}>
+                    <Text style={{ fontSize: 16 }}>📍</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowTitle}>{sug.mainText}</Text>
+                    <Text style={s.rowSub} numberOfLines={1}>{sug.secondaryText}</Text>
+                  </View>
+                  <Text style={s.chevron}>›</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           {/* Current location */}
           <View style={s.currentBox}>
@@ -120,24 +219,19 @@ export default function LocationPickerScreen() {
             </View>
           </View>
 
-          {/* Detect GPS button */}
+          {/* Detect GPS */}
           <Pressable
             onPress={handleDetect}
             disabled={detecting}
             style={({ pressed }) => [s.detectBtn, pressed && { opacity: 0.85 }]}
           >
-            {detecting ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={{ fontSize: 18 }}>🎯</Text>
-            )}
+            {detecting
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={{ fontSize: 18 }}>🎯</Text>
+            }
             <View style={{ flex: 1 }}>
-              <Text style={s.detectTitle}>
-                {detecting ? 'Detecting…' : 'Use my current location'}
-              </Text>
-              <Text style={s.detectSub}>
-                {detecting ? 'Getting GPS fix…' : 'Enable GPS for accurate results'}
-              </Text>
+              <Text style={s.detectTitle}>{detecting ? t('location_detecting') : t('location_detect_gps')}</Text>
+              <Text style={s.detectSub}>{detecting ? t('location_detecting') : 'Powered by Google Maps'}</Text>
             </View>
           </Pressable>
 
@@ -158,12 +252,12 @@ export default function LocationPickerScreen() {
           {/* Saved addresses */}
           {addresses.length > 0 && (
             <View style={s.group}>
-              <Text style={s.groupLabel}>SAVED ADDRESSES</Text>
+              <Text style={s.groupLabel}>{t('address_book_title').toUpperCase()}</Text>
               {addresses.map((addr) => (
                 <Pressable
                   key={addr.id}
                   style={({ pressed }) => [s.row, pressed && { backgroundColor: '#fef6f2' }]}
-                  onPress={() => handlePick(addr.city || addr.line1, `${addr.district}, ${addr.state}`)}
+                  onPress={() => handleQuickPick(addr.city || addr.line1, `${addr.district}, ${addr.state}`, addr.pincode)}
                 >
                   <View style={s.rowIcon}>
                     <Text style={{ fontSize: 16 }}>
@@ -180,39 +274,28 @@ export default function LocationPickerScreen() {
             </View>
           )}
 
-          {/* Popular areas */}
-          <View style={s.group}>
-            <Text style={s.groupLabel}>POPULAR AREAS</Text>
-            {filtered.map((loc) => (
-              <Pressable
-                key={loc.area}
-                style={({ pressed }) => [s.row, pressed && { backgroundColor: '#fef6f2' }]}
-                onPress={() => handlePick(loc.area, loc.district)}
-              >
-                <View style={s.rowIcon}>
-                  <Text style={{ fontSize: 16 }}>📍</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.rowTitle}>{loc.area}</Text>
-                  <Text style={s.rowSub}>{loc.district}</Text>
-                </View>
-                <Text style={s.chevron}>›</Text>
-              </Pressable>
-            ))}
-            {filtered.length === 0 && query.length > 0 && (
-              <Pressable
-                style={({ pressed }) => [s.row, pressed && { backgroundColor: '#fef6f2' }]}
-                onPress={handleManualSave}
-              >
-                <View style={s.rowIcon}><Text style={{ fontSize: 16 }}>✏️</Text></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.rowTitle}>Set to "{query}"</Text>
-                  <Text style={s.rowSub}>Tap to use this as your area</Text>
-                </View>
-                <Text style={s.chevron}>›</Text>
-              </Pressable>
-            )}
-          </View>
+          {/* Popular areas (shown when not actively searching) */}
+          {!isTyping && (
+            <View style={s.group}>
+              <Text style={s.groupLabel}>{t('location_recent').toUpperCase()}</Text>
+              {QUICK_LOCATIONS.map((loc) => (
+                <Pressable
+                  key={loc.area}
+                  style={({ pressed }) => [s.row, pressed && { backgroundColor: '#fef6f2' }]}
+                  onPress={() => handleQuickPick(loc.area, loc.district, loc.pincode)}
+                >
+                  <View style={s.rowIcon}>
+                    <Text style={{ fontSize: 16 }}>📍</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowTitle}>{loc.area}</Text>
+                    <Text style={s.rowSub}>{loc.district}</Text>
+                  </View>
+                  <Text style={s.chevron}>›</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -244,9 +327,12 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
-  searchIcon: { fontSize: 14 },
+  searchIcon:  { fontSize: 14 },
   searchInput: { flex: 1, fontSize: 14, color: '#111827' },
-  clearX: { fontSize: 12, color: '#9ca3af', fontWeight: '700' },
+  clearX:      { fontSize: 12, color: '#9ca3af', fontWeight: '700' },
+
+  searchingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 },
+  searchingTxt: { fontSize: 13, color: '#9ca3af' },
 
   currentBox: {
     backgroundColor: '#fff', borderRadius: 14, padding: 14,
@@ -258,7 +344,7 @@ const s = StyleSheet.create({
     fontSize: 9, fontWeight: '700', color: '#9ca3af',
     letterSpacing: 1, marginBottom: 10,
   },
-  currentRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  currentRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
   currentArea: { fontSize: 15, fontWeight: '800', color: '#111827' },
   currentDist: { fontSize: 11, color: '#6b7280', marginTop: 2 },
   activeDot: {
@@ -278,8 +364,8 @@ const s = StyleSheet.create({
 
   errBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, gap: 8 },
   errTxt: { fontSize: 12, color: '#ef4444', lineHeight: 18 },
-  settingsLink: { alignSelf: 'flex-start' },
-  settingsLinkTxt: { fontSize: 12, color: '#c75a28', fontWeight: '700', textDecorationLine: 'underline' },
+  settingsLink:    { alignSelf: 'flex-start' },
+  settingsLinkTxt: { fontSize: 12, color: BRAND, fontWeight: '700', textDecorationLine: 'underline' },
 
   group: {
     backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden',

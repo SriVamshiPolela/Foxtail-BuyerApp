@@ -1,6 +1,6 @@
 export type ShipLevel = 'mandal' | 'district' | 'state' | 'national';
 export type TrustType = 'verified' | 'local' | 'organic' | 'handmade';
-export type OrderStatus = 'delivered' | 'in-transit' | 'processing';
+export type OrderStatus = 'delivered' | 'in-transit' | 'processing' | 'cancelled';
 
 export type Product = {
   id: string;

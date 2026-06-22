@@ -7,11 +7,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
+import { useLanguage } from '@/context/language-context';
 
 const BRAND   = '#c75a28';
 const WARM_BG = '#fffaf7';
 
 export default function RegisterScreen() {
+  const { t } = useLanguage();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const setPendingPhone = useAuthStore((s) => s.setPendingPhone);
@@ -59,14 +61,14 @@ export default function RegisterScreen() {
           <View style={s.logoWrap}>
             <Text style={{ fontSize: 30 }}>🪔</Text>
           </View>
-          <Text style={s.appName}>Harvest Connect</Text>
-          <Text style={s.tagline}>Connect with local farmers & artisans</Text>
+          <Text style={s.appName}>{t('login_app_name')}</Text>
+          <Text style={s.tagline}>{t('register_hero_tagline')}</Text>
 
           <View style={s.benefitRow}>
             {[
-              { icon: '✅', label: 'Free to join' },
-              { icon: '🌿', label: 'Verified local' },
-              { icon: '🚚', label: 'Fast delivery' },
+              { icon: '✅', label: t('register_benefit_free') },
+              { icon: '🌿', label: t('register_benefit_local') },
+              { icon: '🚚', label: t('register_benefit_delivery') },
             ].map(({ icon, label }) => (
               <View key={label} style={s.benefitChip}>
                 <Text style={{ fontSize: 13 }}>{icon}</Text>
@@ -78,11 +80,11 @@ export default function RegisterScreen() {
 
         {/* ── Card ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>Create account</Text>
-          <Text style={s.cardSub}>Join 2,340+ buyers. Takes less than a minute.</Text>
+          <Text style={s.cardTitle}>{t('register_title')}</Text>
+          <Text style={s.cardSub}>{t('register_sub')}</Text>
 
           {/* Name */}
-          <Text style={s.label}>Full name</Text>
+          <Text style={s.label}>{t('register_name_label')}</Text>
           <View style={[s.inputWrap, focused === 'name' && s.inputActive]}>
             <Text style={s.inputIcon}>👤</Text>
             <TextInput
@@ -99,12 +101,12 @@ export default function RegisterScreen() {
           </View>
 
           {/* Phone */}
-          <Text style={[s.label, { marginTop: 16 }]}>Mobile number</Text>
+          <Text style={[s.label, { marginTop: 16 }]}>{t('register_phone_label')}</Text>
           <View style={[s.inputWrap, focused === 'phone' && s.inputActive]}>
             <Text style={s.inputIcon}>📱</Text>
             <TextInput
               style={s.input}
-              placeholder="+91 XXXXX XXXXX"
+              placeholder={t('login_phone_placeholder')}
               placeholderTextColor="#b0b8c4"
               value={phone}
               onChangeText={setPhone}
@@ -117,9 +119,9 @@ export default function RegisterScreen() {
 
           {/* Email */}
           <View style={s.emailLabelRow}>
-            <Text style={[s.label, { marginTop: 16 }]}>Email</Text>
+            <Text style={[s.label, { marginTop: 16 }]}>{t('register_email_label')}</Text>
             <View style={s.optionalBadge}>
-              <Text style={s.optionalTxt}>optional · for OTP delivery</Text>
+              <Text style={s.optionalTxt}>{t('register_email_optional')}</Text>
             </View>
           </View>
           <View style={[s.inputWrap, focused === 'email' && s.inputActive]}>
@@ -141,9 +143,9 @@ export default function RegisterScreen() {
 
           {/* Referral code */}
           <View style={s.emailLabelRow}>
-            <Text style={[s.label, { marginTop: 16 }]}>Referral code</Text>
+            <Text style={[s.label, { marginTop: 16 }]}>{t('register_referral_label')}</Text>
             <View style={s.optionalBadge}>
-              <Text style={s.optionalTxt}>optional · get ₹50 off first order</Text>
+              <Text style={s.optionalTxt}>{t('register_referral_optional')}</Text>
             </View>
           </View>
           <View style={[s.inputWrap, focused === 'referral' && s.inputActive]}>
@@ -170,19 +172,17 @@ export default function RegisterScreen() {
           >
             {busy
               ? <ActivityIndicator color="#fff" />
-              : <Text style={s.primaryBtnTxt}>Create Account  →</Text>
+              : <Text style={s.primaryBtnTxt}>{t('register_create_btn')}</Text>
             }
           </TouchableOpacity>
 
           <View style={s.noteBox}>
-            <Text style={s.noteTxt}>
-              📲  We'll send a 6-digit OTP to verify your mobile number
-            </Text>
+            <Text style={s.noteTxt}>📲  {t('register_note')}</Text>
           </View>
 
           <View style={s.divRow}>
             <View style={s.divLine} />
-            <Text style={s.divTxt}>Already a member?</Text>
+            <Text style={s.divTxt}>{t('register_already')}</Text>
             <View style={s.divLine} />
           </View>
 
@@ -191,7 +191,7 @@ export default function RegisterScreen() {
             onPress={() => router.replace('/auth/login')}
             activeOpacity={0.85}
           >
-            <Text style={s.ghostBtnTxt}>Log in instead</Text>
+            <Text style={s.ghostBtnTxt}>{t('register_login_instead')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

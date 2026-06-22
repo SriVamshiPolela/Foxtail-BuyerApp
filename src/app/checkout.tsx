@@ -9,13 +9,9 @@ import { useUserStore } from '@/store/user';
 import { useAuthStore } from '@/store/auth';
 import { usePaymentStore } from '@/store/payment';
 import { placeOrder as callPlaceOrder } from '@/services/orders';
+import { debitWallet } from '@/services/user';
+import { useLanguage } from '@/context/language-context';
 import type { Address } from '@/store/user';
-
-const DELIVERY_SLOTS = [
-  { id: 'today',    icon: '⚡', label: 'Today',     sub: '4 PM – 6 PM' },
-  { id: 'tomorrow', icon: '🌅', label: 'Tomorrow',  sub: 'Before 12 PM' },
-  { id: 'schedule', icon: '📅', label: 'Schedule',  sub: 'Pick a date' },
-];
 
 function PriceRow({ label, value, green, bold }: { label: string; value: string; green?: boolean; bold?: boolean }) {
   return (
@@ -33,6 +29,14 @@ function PriceRow({ label, value, green, bold }: { label: string; value: string;
 }
 
 export default function CheckoutScreen() {
+  const { t } = useLanguage();
+
+  const DELIVERY_SLOTS = [
+    { id: 'today',    icon: '⚡', label: t('checkout_slot_today'),    sub: t('checkout_slot_today_sub') },
+    { id: 'tomorrow', icon: '🌅', label: t('checkout_slot_tomorrow'), sub: t('checkout_slot_tomorrow_sub') },
+    { id: 'schedule', icon: '📅', label: t('checkout_slot_schedule'), sub: t('checkout_slot_schedule_sub') },
+  ];
+
   const allItems  = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
 
@@ -56,7 +60,8 @@ export default function CheckoutScreen() {
   const { userId, token } = useAuthStore();
 
   const { upiIds, cards, codEnabled } = usePaymentStore();
-  const walletBalance = useUserStore((s) => s.walletBalance);
+  const walletBalance    = useUserStore((s) => s.walletBalance);
+  const setWalletBalance = useUserStore((s) => s.setWalletBalance);
   const defaultUPI    = upiIds.find((u) => u.isDefault);
   const defaultCard   = cards.find((c) => c.isDefault);
   const walletRupees  = walletBalance.toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -69,10 +74,10 @@ export default function CheckoutScreen() {
     ...(cards.length > 0
       ? [{ id: 'card', icon: '💳', label: 'Credit / Debit Card', sub: `•••• ${defaultCard?.last4 ?? '****'}` }]
       : [{ id: 'card', icon: '💳', label: 'Credit / Debit Card', sub: null }]),
-    ...(codEnabled ? [{ id: 'cod', icon: '💵', label: 'Cash on Delivery', sub: 'Pay when delivered' }] : []),
+    ...(codEnabled ? [{ id: 'cod', icon: '💵', label: 'Cash on Delivery', sub: t('checkout_cod') }] : []),
     {
       id: 'wallet', icon: '👛', label: 'Harvest Wallet',
-      sub: walletBalance > 0 ? `₹${walletRupees} available` : 'No balance — add money first',
+      sub: walletBalance > 0 ? `₹${walletRupees} available` : t('checkout_wallet_empty'),
       disabled: walletBalance === 0,
     },
   ];
@@ -99,8 +104,17 @@ export default function CheckoutScreen() {
   const handlePlaceOrder = async () => {
     if (busy || items.length === 0) return;
     if (!userId || !token) {
-      setOrderError('Please log in to continue.');
+      setOrderError(t('checkout_please_login'));
       return;
+    }
+
+    // Reject wallet payment if balance is insufficient before hitting the server
+    if (selectedPayment === 'wallet') {
+      const totalRupees = subtotal + delivery - discount;
+      if (walletBalance < totalRupees) {
+        setOrderError(`Insufficient wallet balance. You have ₹${walletBalance.toFixed(2)} but need ₹${totalRupees.toFixed(2)}. Please top up your wallet.`);
+        return;
+      }
     }
 
     setOrderError(null);
@@ -149,10 +163,26 @@ export default function CheckoutScreen() {
         token,
       );
 
+      // placed is now an array (one sub-order per seller)
+      const primaryOrder = placed[0]!;
+
+      // Wallet: debit the sum of all sub-orders immediately
+      if (selectedPayment === 'wallet' && userId) {
+        try {
+          const totalPaise = placed.reduce((s, o) => s + o.total, 0);
+          const result = await debitWallet(userId, totalPaise, primaryOrder.id);
+          setWalletBalance(result.balance);
+        } catch (debitErr) {
+          setOrderError(debitErr instanceof Error ? debitErr.message : 'Wallet debit failed');
+          setBusy(false);
+          return;
+        }
+      }
+
       clearCart();
       router.replace({
         pathname: '/order-confirmed',
-        params: { orderId: placed.id, slot: slotLabel, payment: paymentLabel },
+        params: { orderId: primaryOrder.id, slot: slotLabel, payment: paymentLabel },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
@@ -170,9 +200,9 @@ export default function CheckoutScreen() {
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={s.backText}>← Back</Text>
+          <Text style={s.backText}>{t('checkout_back')}</Text>
         </Pressable>
-        <Text style={s.topTitle}>Checkout</Text>
+        <Text style={s.topTitle}>{t('checkout_title')}</Text>
         <View style={{ width: 64 }} />
       </SafeAreaView>
 
@@ -190,7 +220,7 @@ export default function CheckoutScreen() {
 
         {/* Deliver To */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Deliver To</Text>
+          <Text style={s.sectionTitle}>{t('checkout_deliver_to')}</Text>
           <PressableScale
             style={s.card}
             scale={0.99}
@@ -219,14 +249,14 @@ export default function CheckoutScreen() {
                   <Text style={s.addrSub}>{addressString}</Text>
                 )}
               </View>
-              <Text style={s.changeText}>Change ›</Text>
+              <Text style={s.changeText}>{t('checkout_change')}</Text>
             </View>
           </PressableScale>
         </View>
 
         {/* Delivery Slot */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Delivery Slot</Text>
+          <Text style={s.sectionTitle}>{t('checkout_delivery_slot')}</Text>
           <View style={s.slotRow}>
             {DELIVERY_SLOTS.map((slot) => (
               <Pressable
@@ -252,7 +282,7 @@ export default function CheckoutScreen() {
 
         {/* Payment Method */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Payment Method</Text>
+          <Text style={s.sectionTitle}>{t('checkout_payment_method')}</Text>
           <View style={s.card}>
             {PAYMENT_METHODS.map((pm, i) => (
               <View key={pm.id}>
@@ -283,21 +313,18 @@ export default function CheckoutScreen() {
 
         {/* Order Summary */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Order Summary</Text>
+          <Text style={s.sectionTitle}>{t('checkout_order_summary')}</Text>
           <View style={[s.card, { gap: 10 }]}>
             <Text style={s.itemsSummary}>
-              <Text style={{ color: '#111827', fontWeight: '700' }}>{itemCount} items</Text>
-              {' '}from{' '}
-              <Text style={{ color: '#111827', fontWeight: '700' }}>
-                {vendorCount} vendor{vendorCount > 1 ? 's' : ''}
-              </Text>
+              <Text style={{ color: '#111827', fontWeight: '700' }}>{itemCount} {t('checkout_items_from')}</Text>
+              {' '}{vendorCount > 1 ? t('checkout_vendors') : t('checkout_vendor')}
             </Text>
             <View style={s.divider} />
-            <PriceRow label="Subtotal"       value={`₹${subtotal}`} />
-            <PriceRow label="Delivery Fee"   value={`₹${delivery}`} />
-            <PriceRow label="Coupon Discount" value={`-₹${discount}`} green />
+            <PriceRow label={t('checkout_subtotal')}        value={`₹${subtotal}`} />
+            <PriceRow label={t('checkout_delivery_fee')}   value={`₹${delivery}`} />
+            <PriceRow label={t('checkout_coupon_discount')} value={`-₹${discount}`} green />
             <View style={s.divider} />
-            <PriceRow label="Total Payable"  value={`₹${total}`} bold />
+            <PriceRow label={t('checkout_total')}          value={`₹${total}`} bold />
           </View>
         </View>
 
@@ -315,7 +342,7 @@ export default function CheckoutScreen() {
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <>
-              <Text style={s.placeOrderText}>Place Order</Text>
+              <Text style={s.placeOrderText}>{t('checkout_place_order')}</Text>
               <View style={s.placeOrderBadge}>
                 <Text style={s.placeOrderBadgeText}>₹{total}</Text>
               </View>

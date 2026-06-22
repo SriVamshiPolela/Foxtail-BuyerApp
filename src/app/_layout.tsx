@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Stack, DarkTheme, DefaultTheme, ThemeProvider, useRouter, useSegments } from 'expo-router';
-import { useColorScheme, View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { ThemePreferenceProvider, useThemePreference } from '@/context/theme-context';
 import { LanguageProvider } from '@/context/language-context';
 import * as Location from 'expo-location';
@@ -47,7 +47,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutInner() {
-  const colorScheme  = useColorScheme();
+  const { scheme }   = useThemePreference();
   const hydrate      = useAuthStore((s) => s.hydrate);
   const isLoading    = useAuthStore((s) => s.isLoading);
   const isLoggedIn   = useAuthStore((s) => s.isLoggedIn);
@@ -105,8 +105,6 @@ function RootLayoutInner() {
       </View>
     );
   }
-
-  const { scheme } = useThemePreference();
 
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>

@@ -6,18 +6,22 @@ import { router } from 'expo-router';
 import { PressableScale } from '@/components/pressable-scale';
 import { fetchOrders } from '@/services/orders';
 import { useAuthStore } from '@/store/auth';
+import { useLanguage } from '@/context/language-context';
 import type { OrderStatus, Order } from '@/types';
 
-const STATUS_CFG: Record<OrderStatus, { label: string; bg: string; text: string; border: string; icon: string }> = {
-  delivered:    { label: 'Delivered',  bg: '#dcfce7', text: '#166534', border: '#86efac', icon: '✓'  },
-  'in-transit': { label: 'In Transit', bg: '#fef3c7', text: '#92400e', border: '#fcd34d', icon: '🚚' },
-  processing:   { label: 'Processing', bg: '#f3f4f6', text: '#374151', border: '#d1d5db', icon: '⏳' },
-};
-
-const FILTER_TABS = ['All', 'Active', 'Delivered'];
-
 export default function OrdersScreen() {
-  const [activeTab, setActiveTab] = useState('All');
+  const { t } = useLanguage();
+
+  const STATUS_CFG: Record<OrderStatus, { label: string; bg: string; text: string; border: string; icon: string }> = {
+    delivered:    { label: t('orders_status_delivered'), bg: '#dcfce7', text: '#166534', border: '#86efac', icon: '✓'  },
+    'in-transit': { label: t('orders_status_transit'),   bg: '#fef3c7', text: '#92400e', border: '#fcd34d', icon: '🚚' },
+    processing:   { label: t('orders_status_processing'),bg: '#f3f4f6', text: '#374151', border: '#d1d5db', icon: '⏳' },
+    cancelled:    { label: t('orders_status_cancelled'), bg: '#fef2f2', text: '#991b1b', border: '#fecaca', icon: '✕'  },
+  };
+
+  const FILTER_TABS = [t('orders_tab_all'), t('orders_tab_active'), t('orders_tab_delivered'), t('orders_tab_cancelled')];
+
+  const [activeTab, setActiveTab] = useState(t('orders_tab_all'));
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [loading,   setLoading]   = useState(true);
 
@@ -35,17 +39,19 @@ export default function OrdersScreen() {
   }, [userId, token]);
 
   const filtered = orders.filter((o) => {
-    if (activeTab === 'All')       return true;
-    if (activeTab === 'Active')    return o.status !== 'delivered';
-    return o.status === 'delivered';
+    if (activeTab === t('orders_tab_all'))       return true;
+    if (activeTab === t('orders_tab_active'))    return o.status !== 'delivered' && o.status !== 'cancelled';
+    if (activeTab === t('orders_tab_delivered')) return o.status === 'delivered';
+    if (activeTab === t('orders_tab_cancelled')) return o.status === 'cancelled';
+    return true;
   });
 
   return (
     <ScrollView style={s.screen} showsVerticalScrollIndicator={false}>
       <SafeAreaView edges={['top']}>
         <View style={s.header}>
-          <Text style={s.title}>My Orders</Text>
-          <Text style={s.subtitle}>Track your purchases</Text>
+          <Text style={s.title}>{t('orders_title')}</Text>
+          <Text style={s.subtitle}>{t('orders_subtitle')}</Text>
         </View>
 
         {/* Filter Tabs */}
@@ -74,11 +80,11 @@ export default function OrdersScreen() {
         ) : filtered.length === 0 ? (
           <View style={s.emptyWrap}>
             <Text style={{ fontSize: 48 }}>📦</Text>
-            <Text style={s.emptyTitle}>No orders here yet</Text>
+            <Text style={s.emptyTitle}>{t('orders_empty_title')}</Text>
             <Text style={s.emptySub}>
-              {activeTab === 'All'
-                ? "You haven't placed any orders yet. Start exploring!"
-                : `Your ${activeTab.toLowerCase()} orders will appear here.`}
+              {activeTab === t('orders_tab_all')
+                ? t('orders_empty_sub_all')
+                : `${activeTab} ${t('orders_empty_sub_filter')}`}
             </Text>
           </View>
         ) : (
@@ -127,7 +133,7 @@ export default function OrdersScreen() {
                     <View style={s.transitBox}>
                       <Text style={{ fontSize: 16 }}>🚚</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={s.transitText}>Expected by {order.expectedDelivery}</Text>
+                        <Text style={s.transitText}>{t('orders_expected_by')} {order.expectedDelivery}</Text>
                         <View style={s.progressTrack}>
                           <View style={[s.progressFill, { width: '65%' }]} />
                         </View>
@@ -138,19 +144,19 @@ export default function OrdersScreen() {
                   {/* Footer */}
                   <View style={s.cardFoot}>
                     <View>
-                      <Text style={s.totalLabel}>Order Total</Text>
+                      <Text style={s.totalLabel}>{t('orders_total')}</Text>
                       <Text style={s.total}>₹{order.total}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       <Pressable style={({ pressed }) => [s.outlineBtn, pressed && { opacity: 0.7 }]}>
-                        <Text style={s.outlineBtnText}>💬 Support</Text>
+                        <Text style={s.outlineBtnText}>{t('orders_support')}</Text>
                       </Pressable>
                       <PressableScale
                         style={s.primaryBtn}
                         scale={0.96}
                         onPress={() => router.push(`/order/${order.id}`)}
                       >
-                        <Text style={s.primaryBtnText}>Track →</Text>
+                        <Text style={s.primaryBtnText}>{t('orders_track')}</Text>
                       </PressableScale>
                     </View>
                   </View>

@@ -9,6 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 
 import { usePaymentStore, detectUPIApp, detectCardNetwork } from '@/store/payment';
 import { useAuthStore } from '@/store/auth';
+import { useLanguage } from '@/context/language-context';
 import {
   fetchPaymentMethods,
   addUPIToServer, addCardToServer,
@@ -84,6 +85,7 @@ function CardVisual({ card }: { card: SavedCard }) {
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function PaymentsScreen() {
+  const { t } = useLanguage();
   const userId = useAuthStore((s) => s.userId);
   const {
     upiIds, cards, loading, codEnabled,
@@ -325,9 +327,9 @@ export default function PaymentsScreen() {
             style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={s.backTxt}>← Back</Text>
+            <Text style={s.backTxt}>{t('payments_back')}</Text>
           </Pressable>
-          <Text style={s.headerTitle}>Payment Methods</Text>
+          <Text style={s.headerTitle}>{t('payments_title')}</Text>
           <View style={{ width: 64 }} />
         </SafeAreaView>
 
@@ -345,16 +347,16 @@ export default function PaymentsScreen() {
             {/* ── UPI ───────────────────────────────────────────────────── */}
             <View>
               <SectionHeader
-                label="UPI IDs"
-                action={showAddUPI ? undefined : '+ Add'}
+                label={t('payments_upi_section')}
+                action={showAddUPI ? undefined : t('payments_add_upi')}
                 onAction={() => { setShowAddUPI(true); setUpiErr(''); }}
               />
               <View style={s.card}>
                 {upiIds.length === 0 && !showAddUPI && (
                   <View style={s.emptyState}>
                     <Text style={s.emptyIcon}>₹</Text>
-                    <Text style={s.emptyTitle}>No UPI IDs saved</Text>
-                    <Text style={s.emptySub}>Add your GPay, PhonePe or Paytm UPI ID</Text>
+                    <Text style={s.emptyTitle}>{t('payments_no_upi')}</Text>
+                    <Text style={s.emptySub}>{t('payments_no_upi')}</Text>
                   </View>
                 )}
 
@@ -373,14 +375,14 @@ export default function PaymentsScreen() {
                         </View>
                         {upi.isDefault ? (
                           <View style={s.defaultBadge}>
-                            <Text style={s.defaultBadgeTxt}>Default</Text>
+                            <Text style={s.defaultBadgeTxt}>{t('payments_default')}</Text>
                           </View>
                         ) : (
                           <Pressable
                             onPress={() => handleSetDefaultUPI(upi.id)}
                             style={({ pressed }) => [s.setDefaultBtn, pressed && { opacity: 0.7 }]}
                           >
-                            <Text style={s.setDefaultTxt}>Set Default</Text>
+                            <Text style={s.setDefaultTxt}>{t('payments_set_default')}</Text>
                           </Pressable>
                         )}
                         <Pressable
@@ -469,16 +471,16 @@ export default function PaymentsScreen() {
             {/* ── Cards ─────────────────────────────────────────────────── */}
             <View>
               <SectionHeader
-                label="Credit & Debit Cards"
-                action={showAddCard ? undefined : '+ Add'}
+                label={t('payments_card_section')}
+                action={showAddCard ? undefined : t('payments_add_card')}
                 onAction={() => { setShowAddCard(true); setCardErr(''); }}
               />
               <View style={s.card}>
                 {cards.length === 0 && !showAddCard && (
                   <View style={s.emptyState}>
                     <Text style={s.emptyIcon}>💳</Text>
-                    <Text style={s.emptyTitle}>No cards saved</Text>
-                    <Text style={s.emptySub}>Add Visa, Mastercard or RuPay cards</Text>
+                    <Text style={s.emptyTitle}>{t('payments_no_cards')}</Text>
+                    <Text style={s.emptySub}>{t('payments_no_cards')}</Text>
                   </View>
                 )}
 
@@ -490,21 +492,21 @@ export default function PaymentsScreen() {
                       <View style={s.cardActions}>
                         {card.isDefault ? (
                           <View style={s.defaultBadge}>
-                            <Text style={s.defaultBadgeTxt}>Default</Text>
+                            <Text style={s.defaultBadgeTxt}>{t('payments_default')}</Text>
                           </View>
                         ) : (
                           <Pressable
                             onPress={() => handleSetDefaultCard(card.id)}
                             style={({ pressed }) => [s.setDefaultBtn, pressed && { opacity: 0.7 }]}
                           >
-                            <Text style={s.setDefaultTxt}>Set Default</Text>
+                            <Text style={s.setDefaultTxt}>{t('payments_set_default')}</Text>
                           </Pressable>
                         )}
                         <Pressable
                           onPress={() => confirmRemoveCard(card.id, card.last4)}
                           style={({ pressed }) => [s.deleteCardBtn, pressed && { opacity: 0.7 }]}
                         >
-                          <Text style={s.deleteCardTxt}>🗑 Remove</Text>
+                          <Text style={s.deleteCardTxt}>🗑 {t('payments_remove')}</Text>
                         </Pressable>
                       </View>
                     </View>
@@ -649,7 +651,7 @@ export default function PaymentsScreen() {
 
             {/* ── COD ───────────────────────────────────────────────────── */}
             <View>
-              <SectionHeader label="Cash on Delivery" />
+              <SectionHeader label={t('checkout_cod')} />
               <View style={s.card}>
                 <View style={s.codRow}>
                   <View style={s.codIconWrap}>

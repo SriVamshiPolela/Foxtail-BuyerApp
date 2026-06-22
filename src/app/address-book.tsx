@@ -6,6 +6,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { useUserStore } from '@/store/user';
 import { useAuthStore } from '@/store/auth';
 import { deleteAddressOnServer } from '@/services/user';
+import { useLanguage } from '@/context/language-context';
 import type { Address } from '@/store/user';
 
 const LABEL_ICON: Record<Address['label'], string> = {
@@ -15,6 +16,7 @@ const LABEL_ICON: Record<Address['label'], string> = {
 };
 
 export default function AddressBookScreen() {
+  const { t } = useLanguage();
   const params = useLocalSearchParams<{ select?: string }>();
   const isSelectMode = params.select === '1';
 
@@ -68,10 +70,10 @@ export default function AddressBookScreen() {
           style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.6 }]}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={s.backText}>← Back</Text>
+          <Text style={s.backText}>{t('address_book_back')}</Text>
         </Pressable>
         <Text style={s.headerTitle}>
-          {isSelectMode ? 'Select Address' : 'Saved Addresses'}
+          {isSelectMode ? t('address_book_select_title') : t('address_book_title')}
         </Text>
         <View style={{ width: 64 }} />
       </SafeAreaView>
@@ -80,8 +82,8 @@ export default function AddressBookScreen() {
         {addresses.length === 0 && (
           <View style={s.emptyWrap}>
             <Text style={{ fontSize: 52 }}>📭</Text>
-            <Text style={s.emptyTitle}>No saved addresses</Text>
-            <Text style={s.emptySub}>Add your first delivery address below.</Text>
+            <Text style={s.emptyTitle}>{t('address_book_empty_title')}</Text>
+            <Text style={s.emptySub}>{t('address_book_empty_sub')}</Text>
           </View>
         )}
 
@@ -106,7 +108,7 @@ export default function AddressBookScreen() {
                   </Text>
                   {addr.isDefault && (
                     <View style={s.defaultBadge}>
-                      <Text style={s.defaultBadgeTxt}>Default</Text>
+                      <Text style={s.defaultBadgeTxt}>{t('address_book_default')}</Text>
                     </View>
                   )}
                 </View>
@@ -130,7 +132,7 @@ export default function AddressBookScreen() {
                   onPress={() => router.push({ pathname: '/address-form', params: { id: addr.id } })}
                 >
                   <Text style={{ fontSize: 13 }}>✏️</Text>
-                  <Text style={s.actionBtnTxt}>Edit</Text>
+                  <Text style={s.actionBtnTxt}>{t('address_book_edit')}</Text>
                 </Pressable>
 
                 <Pressable
@@ -138,7 +140,7 @@ export default function AddressBookScreen() {
                   onPress={() => handleDelete(addr)}
                 >
                   <Text style={{ fontSize: 13 }}>🗑️</Text>
-                  <Text style={[s.actionBtnTxt, { color: '#ef4444' }]}>Delete</Text>
+                  <Text style={[s.actionBtnTxt, { color: '#ef4444' }]}>{t('address_book_delete')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -152,7 +154,7 @@ export default function AddressBookScreen() {
           onPress={() => router.push({ pathname: '/address-form' })}
         >
           <Text style={s.addBtnPlus}>+</Text>
-          <Text style={s.addBtnTxt}>Add New Address</Text>
+          <Text style={s.addBtnTxt}>{t('address_book_add')}</Text>
         </PressableScale>
 
         <View style={{ height: 40 }} />
